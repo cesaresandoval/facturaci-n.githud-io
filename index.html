@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SistePOS Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        /* TUS VARIABLES Y ESTILOS GLOBALES ORIGINALES */
+        :root {
+            --bg: #f8fafc; --white: #ffffff; --primary: #2563eb; --text: #1e293b; --muted: #64748b;
+            --border: #e2e8f0; --danger: #ef4444; --success-bg: #f0fdf4; --success-text: #15803d;
+            --error-bg: #fff1f2; --error-text: #be123c;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+        
+        .app-container { display: flex; flex-direction: column; height: 100vh; }
+        
+        /* HEADER RESPONSIVO */
+        .main-header { height: 70px; background: var(--white); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; padding: 0 1rem; flex-shrink: 0; }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo h1 { font-size: 1.2rem; }
+        .logo-box { background: var(--primary); color: white; padding: 8px; border-radius: 8px; }
+        
+        /* AJUSTE DE LAYOUT PARA MÓVIL */
+        .main-layout { display: grid; grid-template-columns: 1fr 400px; flex: 1; overflow: hidden; }
+
+        @media (max-width: 1024px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .time-info { display: none; } /* Ocultar reloj en móvil para ganar espacio */
+            
+            /* El carrito se convierte en un panel flotante inferior en móvil */
+            .cart-section { 
+                position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; 
+                z-index: 1000; border-left: none !important; border-top: 5px solid var(--primary);
+                transform: translateY(100%); transition: transform 0.3s ease;
+            }
+            .cart-section.active-mobile { transform: translateY(0); }
+            .products-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important; }
+        }
+
+        .products-section { padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; }
+        .section-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+        .search-bar { position: relative; margin-bottom: 1.5rem; }
+        .search-bar i { position: absolute; left: 12px; top: 12px; color: var(--muted); }
+        .search-bar input { width: 100%; padding: 12px 40px; border: 1px solid var(--border); border-radius: 8px; outline: none; font-size: 16px; }
+        
+        .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+        .product-card { background: white; padding: 1rem; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; }
+        
+        .badge { padding: 4px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
+        .badge-success { background: #dcfce7; color: #166534; }
+        .badge-danger { background: #fee2e2; color: #991b1b; }
+        .badge-warning { background: #fef9c3; color: #854d0e; }
+        .price-select { width: 100%; margin: 10px 0; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: #f8fafc; }
+        
+        .cart-section { background: white; border-left: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); }
+        .cart-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
+        .cart-list { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; }
+        .cart-item { padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+        .cart-footer { padding: 1.5rem; border-top: 2px solid var(--text); flex-shrink: 0; background: white; }
+        
+        .btn-qty { border: 1px solid var(--border); background: white; width: 32px; height: 32px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .btn-checkout { width: 100%; padding: 1.2rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
+        
+        /* BOTÓN FLOTANTE CARRITO PARA MÓVIL */
+        #mobile-cart-btn {
+            display: none; position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px;
+            border-radius: 50%; background: var(--primary); color: white; border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 999; justify-content: center; align-items: center;
+        }
+        @media (max-width: 1024px) { #mobile-cart-btn { display: flex; } }
+
+        /* MODALES */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; padding: 10px; }
+        .modal-content { background: white; padding: 1.5rem; border-radius: 12px; width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+        
+        /* ESTILOS DE TUS TABLAS Y REPORTES */
+        .total-pay-display { background: #f8faff; padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; }
+        .amounts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+        .btn-q { padding: 12px 5px; border: 1px solid var(--border); background: #f1f5f9; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .change-status { padding: 1.2rem; border-radius: 12px; text-align: center; margin-bottom: 1rem; }
+        .btn-pay-confirm { width: 100%; padding: 1rem; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        
+        .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn-text-danger { background: none; border: none; color: var(--danger); cursor: pointer; font-weight: bold; }
+        .btn-add-var { margin-top: 5px; background: none; border: 1px dashed var(--primary); color: var(--primary); padding: 8px; border-radius: 5px; width: 100%; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header class="main-header">
+        <div class="logo">
+            <div class="logo-box"><i data-lucide="layout-dashboard"></i></div>
+            <div><h1>SistePOS</h1><p style="font-size: 0.7rem; color: var(--muted);">Punto de Venta</p></div>
+        </div>
+        
+        <div style="display:flex; gap:5px; background:#f1f5f9; padding:4px; border-radius:10px;">
+            <button id="btn-nav-pos" onclick="toggleView('pos')" style="padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:white; color:var(--primary);">Ventas</button>
+            <button id="btn-nav-rep" onclick="toggleView('rep')" style="padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:none; color:var(--muted);">Reportes</button>
+        </div>
+
+        <div class="time-info" style="text-align: right; font-family: 'JetBrains Mono';">
+            <p id="txt-date" style="font-size: 0.75rem;"></p>
+            <p id="txt-clock" style="font-size: 1rem; color: var(--primary);"></p>
+        </div>
+    </header>
+
+    <main class="main-layout" id="main-view-pos">
+        <section class="products-section">
+            <div class="section-header">
+                <h2>Productos</h2>
+                <button class="btn-primary" onclick="showNewProductModal()">+ Nuevo</button>
+            </div>
+            <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="Buscar producto..." oninput="renderProducts()">
+            </div>
+            <div id="products-grid" class="products-grid"></div>
+        </section>
+
+        <aside class="cart-section" id="cart-aside">
+            <div class="cart-header">
+                <h3><i data-lucide="shopping-cart"></i> Carrito</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn-text-danger" onclick="clearCart()">Vaciar</button>
+                    <button id="close-cart-mobile" onclick="toggleMobileCart()" style="display:none; border:none; background:#eee; padding:5px 10px; border-radius:5px;">Cerrar</button>
+                </div>
+            </div>
+            <div id="cart-list" class="cart-list"></div>
+            <div class="cart-footer">
+                <div class="total-row" style="display:flex; justify-content:space-between; font-size:1.8rem; font-weight:bold; margin-bottom:1rem;">
+                    <span>Total:</span>
+                    <span id="cart-total">$ 0</span>
+                </div>
+                <button class="btn-checkout" onclick="openCheckoutModal()">💵 Procesar Venta</button>
+            </div>
+        </aside>
+
+        <button id="mobile-cart-btn" onclick="toggleMobileCart()"><i data-lucide="shopping-bag"></i></button>
+    </main>
+
+    <main id="main-view-rep" style="display:none; padding:1rem; overflow-y:auto; flex:1;">
+        <div style="max-width:1000px; margin:0 auto; display:flex; flex-direction:column; gap:20px;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:20px;">
+                <div style="background:white; padding:1.5rem; border-radius:12px; border:1px solid var(--border);">
+                    <h3>Ventas de Hoy</h3>
+                    <h1 id="rep-total-today" style="color:var(--primary); font-family:'JetBrains Mono'; margin:10px 0;">$ 0</h1>
+                    <div style="height:250px; overflow-y:auto; border-top:1px solid var(--border);">
+                        <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <thead style="position:sticky; top:0; background:white;">
+                                <tr><th style="text-align:left; padding:10px;">Hora</th><th style="text-align:left;">Items</th><th style="text-align:right; padding:10px;">Total</th></tr>
+                            </thead>
+                            <tbody id="table-rep-today"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="background:white; padding:1.5rem; border-radius:12px; border:1px solid var(--border);">
+                    <h3>Historial y Exportación</h3>
+                    <div style="display:flex; flex-direction:column; gap:10px; margin:10px 0;">
+                        <div style="display:flex; gap:5px;">
+                            <input type="date" id="rep-date-start" style="padding:8px; border:1px solid var(--border); border-radius:5px; flex:1;">
+                            <input type="date" id="rep-date-end" style="padding:8px; border:1px solid var(--border); border-radius:5px; flex:1;">
+                        </div>
+                        <button class="btn-primary" onclick="filterHistory()" style="width:100%;">Filtrar Historial</button>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;">
+                        <button onclick="exportExcel()" style="flex:1; padding:10px; background:#166534; color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:bold;">Excel</button>
+                        <button onclick="exportPDF()" style="flex:1; padding:10px; background:#991b1b; color:white; border:none; border-radius:6px; font-size:0.8rem; font-weight:bold;">PDF</button>
+                    </div>
+                    <div id="rep-res-history" style="height:150px; overflow-y:auto; border-top:1px solid var(--border);">
+                         <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                            <tbody id="table-rep-history"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:white; padding:1.5rem; border-radius:12px; border:1px solid var(--border);">
+                <h3 id="cat-title">Ventas por Categoría</h3>
+                <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+                    <tbody id="table-rep-categories"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="modal-product" class="modal">
+    <div class="modal-content">
+        <h2 id="modal-title">Producto</h2>
+        <form id="form-product" style="margin-top:15px;">
+            <input type="hidden" id="form-id">
+            <div style="margin-bottom:1rem;"><label style="display:block; font-size:0.8rem; font-weight:bold;">Nombre</label>
+                <input type="text" id="form-name" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px;" required></div>
+            <div style="margin-bottom:1rem;"><label style="display:block; font-size:0.8rem; font-weight:bold;">Precios</label>
+                <div id="form-variants"></div><button type="button" class="btn-add-var" onclick="addVariantInput()">+ Añadir Variante</button></div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div><label style="display:block; font-size:0.8rem; font-weight:bold;">Stock</label><input type="number" id="form-stock" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px;" required></div>
+                <div><label style="display:block; font-size:0.8rem; font-weight:bold;">Categoría</label><input type="text" id="form-category" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px;" required></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" onclick="closeModal()" style="flex:1; padding:10px; border-radius:6px;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="flex:1;">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="modal-checkout" class="modal">
+    <div class="modal-content">
+        <div style="display:flex; justify-content:space-between; align-items:center;"><h2>Cobrar</h2><button onclick="closeCheckout()" style="background:none; border:none; font-size:1.5rem;">&times;</button></div>
+        <div class="total-pay-display"><p>Total</p><h1 id="pay-total-display">$ 0</h1></div>
+        <div style="margin-bottom:1rem;"><label style="display:block; font-weight:bold; margin-bottom:5px;">Dinero recibido</label>
+            <input type="number" id="cash-received" style="width:100%; padding:15px; font-size:1.5rem; text-align:center; border:2px solid var(--primary); border-radius:10px;" oninput="calculateChange()"></div>
+        <div class="amounts-grid" id="quick-grid"></div>
+        <div id="change-box" class="change-status"><p id="change-label"></p><h2 id="change-value"></h2></div>
+        <button id="btn-confirm-pay" class="btn-pay-confirm" onclick="processFinalSale()" disabled>Confirmar Pago</button>
+    </div>
+</div>
+
+<script>
+/* TODA TU LÓGICA DE INDEX7.HTML RECUPERADA LÍNEA POR LÍNEA */
+
+let products = JSON.parse(localStorage.getItem('pos_data')) || [
+    { id: 1, name: "Hamburguesa", category: "Comida", stock: 15, variants: [{label: "Sencilla", price: 10000}, {label: "Combo", price: 15000}] },
+    { id: 2, name: "Refresco", category: "Bebidas", stock: 20, variants: [{label: "Lata 350ml", price: 3500}] }
+];
+let cart = [];
+let sales = JSON.parse(localStorage.getItem('pos_sales')) || [];
+let filteredSales = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderProducts();
+    updateClock();
+    setInterval(updateClock, 1000);
+    if(window.innerWidth <= 1024) document.getElementById('close-cart-mobile').style.display = 'block';
+});
+
+function toggleMobileCart() {
+    document.getElementById('cart-aside').classList.toggle('active-mobile');
+}
+
+function toggleView(v) {
+    document.getElementById('main-view-pos').style.display = v === 'pos' ? (window.innerWidth > 1024 ? 'grid' : 'flex') : 'none';
+    document.getElementById('main-view-rep').style.display = v === 'rep' ? 'block' : 'none';
+    document.getElementById('btn-nav-pos').style.background = v === 'pos' ? 'white' : 'none';
+    document.getElementById('btn-nav-pos').style.color = v === 'pos' ? 'var(--primary)' : 'var(--muted)';
+    document.getElementById('btn-nav-rep').style.background = v === 'rep' ? 'white' : 'none';
+    document.getElementById('btn-nav-rep').style.color = v === 'rep' ? 'var(--primary)' : 'var(--muted)';
+    if(v === 'rep') { renderReports(); renderCategoryReport(sales.filter(s => s.date === new Date().toLocaleDateString('es-ES'))); }
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('txt-date').innerText = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+    document.getElementById('txt-clock').innerText = now.toLocaleTimeString('es-ES');
+}
+
+function renderProducts() {
+    const grid = document.getElementById('products-grid');
+    const search = document.getElementById('search-input').value.toLowerCase();
+    grid.innerHTML = '';
+    products.filter(p => p.name.toLowerCase().includes(search)).forEach(p => {
+        const sClass = p.stock <= 0 ? 'badge-danger' : (p.stock <= 5 ? 'badge-warning' : 'badge-success');
+        grid.innerHTML += `
+            <div class="product-card">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="background:#f1f5f9; padding:8px; border-radius:8px;"><i data-lucide="package"></i></div>
+                    <div><h3 style="font-size:0.95rem;">${p.name}</h3><p style="font-size:0.75rem; color:var(--muted);">${p.category}</p></div>
+                </div>
+                <select id="sel-price-${p.id}" class="price-select">
+                    ${p.variants.map((v, i) => `<option value="${i}">${v.label} - $${v.price}</option>`).join('')}
+                </select>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span class="badge ${sClass}">Stock: ${p.stock}</span>
+                </div>
+                <div style="display:flex; gap:5px; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
+                    <button onclick="editProduct(${p.id})" style="flex:1; padding:8px; border:1px solid #ddd; background:none; border-radius:6px;"><i data-lucide="edit-3" style="width:16px;"></i></button>
+                    <button onclick="deleteProduct(${p.id})" style="flex:1; padding:8px; border:1px solid #ddd; background:none; border-radius:6px; color:var(--danger);"><i data-lucide="trash-2" style="width:16px;"></i></button>
+                    <button onclick="addToCart(${p.id})" class="btn-primary" style="padding:8px; font-size:0.75rem;">🛒 Añadir</button>
+                </div>
+            </div>`;
+    });
+    lucide.createIcons();
+}
+
+function addToCart(id) {
+    const p = products.find(prod => prod.id === id);
+    const vIdx = document.getElementById(`sel-price-${id}`).value;
+    const variant = p.variants[vIdx];
+    const existing = cart.find(i => i.id === id && i.label === variant.label);
+    if (existing) {
+        if (existing.qty < p.stock) existing.qty++; else alert("Sin stock");
+    } else {
+        if (p.stock > 0) cart.push({ ...variant, id: p.id, name: p.name, qty: 1, category: p.category });
+        else alert("Agotado");
+    }
+    renderCart();
+}
+
+function renderCart() {
+    const list = document.getElementById('cart-list');
+    let total = 0;
+    list.innerHTML = cart.length ? '' : '<p style="text-align:center; color:var(--muted); margin-top:20px;">Vacío</p>';
+    cart.forEach((item, idx) => {
+        total += item.price * item.qty;
+        list.innerHTML += `
+            <div class="cart-item">
+                <div style="display:flex; justify-content:space-between;">
+                    <strong>${item.name}</strong><span>$${(item.price * item.qty).toLocaleString()}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:5px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <button class="btn-qty" onclick="updateQty(${idx},-1)">-</button>
+                        <span>${item.qty}</span>
+                        <button class="btn-qty" onclick="updateQty(${idx},1)">+</button>
+                    </div>
+                    <button onclick="removeItem(${idx})" style="border:none; background:none; color:var(--danger);"><i data-lucide="trash-2" style="width:18px;"></i></button>
+                </div>
+            </div>`;
+    });
+    document.getElementById('cart-total').innerText = `$ ${total.toLocaleString()}`;
+    lucide.createIcons();
+}
+
+function updateQty(idx, val) {
+    const item = cart[idx]; const p = products.find(prod => prod.id === item.id);
+    if (val > 0 && item.qty >= p.stock) return;
+    item.qty += val; if (item.qty <= 0) cart.splice(idx, 1);
+    renderCart();
+}
+
+function removeItem(idx) { cart.splice(idx, 1); renderCart(); }
+function clearCart() { cart = []; renderCart(); }
+
+function openCheckoutModal() {
+    if (!cart.length) return;
+    const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    document.getElementById('pay-total-display').innerText = `$ ${total.toLocaleString()}`;
+    document.getElementById('cash-received').value = '';
+    const grid = document.getElementById('quick-grid');
+    const opts = [total, 10000, 20000, 50000, 100000];
+    grid.innerHTML = opts.map(o => `<button class="btn-q" onclick="setCash(${o})">$ ${o.toLocaleString()}</button>`).join('');
+    document.getElementById('modal-checkout').style.display = 'flex';
+    calculateChange();
+}
+
+function setCash(a) { document.getElementById('cash-received').value = a; calculateChange(); }
+
+function calculateChange() {
+    const t = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    const r = parseFloat(document.getElementById('cash-received').value) || 0;
+    const diff = r - t;
+    const box = document.getElementById('change-box');
+    const btn = document.getElementById('btn-confirm-pay');
+    if (diff >= 0) {
+        box.style.background = '#dcfce7'; box.style.color = '#166534';
+        document.getElementById('change-label').innerText = "Cambio";
+        document.getElementById('change-value').innerText = `$ ${diff.toLocaleString()}`;
+        btn.disabled = false; btn.style.background = '#2563eb'; btn.style.color = 'white';
+    } else {
+        box.style.background = '#fee2e2'; box.style.color = '#991b1b';
+        document.getElementById('change-label').innerText = "Faltan";
+        document.getElementById('change-value').innerText = `$ ${Math.abs(diff).toLocaleString()}`;
+        btn.disabled = true; btn.style.background = '#eee';
+    }
+}
+
+function processFinalSale() {
+    const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+    const now = new Date();
+    sales.push({
+        date: now.toLocaleDateString('es-ES'),
+        time: now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+        items: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
+        total: total,
+        timestamp: now.getTime(),
+        categories: cart.map(i => ({ cat: i.category, total: i.price * i.qty }))
+    });
+    localStorage.setItem('pos_sales', JSON.stringify(sales));
+    cart.forEach(item => { products.find(p => p.id === item.id).stock -= item.qty; });
+    localStorage.setItem('pos_data', JSON.stringify(products));
+    alert("Venta realizada");
+    cart = []; renderCart(); renderProducts(); closeCheckout();
+    if(window.innerWidth <= 1024) toggleMobileCart();
+}
+
+function renderReports() {
+    const today = new Date().toLocaleDateString('es-ES');
+    const todaySales = sales.filter(s => s.date === today);
+    const table = document.getElementById('table-rep-today');
+    let total = 0; table.innerHTML = '';
+    todaySales.forEach(s => {
+        total += s.total;
+        table.innerHTML += `<tr><td style="padding:10px;">${s.time}</td><td>${s.items}</td><td style="text-align:right;">$${s.total.toLocaleString()}</td></tr>`;
+    });
+    document.getElementById('rep-total-today').innerText = `$ ${total.toLocaleString()}`;
+}
+
+function filterHistory() {
+    const start = new Date(document.getElementById('rep-date-start').value + 'T00:00:00').getTime();
+    const end = new Date(document.getElementById('rep-date-end').value + 'T23:59:59').getTime();
+    if (isNaN(start) || isNaN(end)) return alert("Elige fechas");
+    filteredSales = sales.filter(s => s.timestamp >= start && s.timestamp <= end);
+    const table = document.getElementById('table-rep-history');
+    table.innerHTML = filteredSales.length ? '' : '<tr><td>Sin datos</td></tr>';
+    
+    const grouped = filteredSales.reduce((acc, s) => {
+        acc[s.date] = (acc[s.date] || 0) + s.total; return acc;
+    }, {});
+
+    Object.keys(grouped).forEach(date => {
+        table.innerHTML += `<tr style="font-weight:bold;"><td>📅 ${date}</td><td style="text-align:right;">$ ${grouped[date].toLocaleString()}</td></tr>`;
+    });
+    renderCategoryReport(filteredSales);
+}
+
+function renderCategoryReport(source) {
+    const stats = {};
+    source.forEach(s => s.categories?.forEach(c => { stats[c.cat] = (stats[c.cat] || 0) + c.total; }));
+    const table = document.getElementById('table-rep-categories');
+    table.innerHTML = '';
+    Object.entries(stats).forEach(([cat, total]) => {
+        table.innerHTML += `<tr><td style="padding:10px;">${cat}</td><td style="text-align:right; font-weight:bold;">$ ${total.toLocaleString()}</td></tr>`;
+    });
+}
+
+function exportExcel() {
+    if (!filteredSales.length) return alert("Filtra primero");
+    const ws = XLSX.utils.json_to_sheet(filteredSales.map(s => ({ "Fecha": s.date, "Items": s.items, "Total": s.total })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas");
+    XLSX.writeFile(wb, "Reporte.xlsx");
+}
+
+function exportPDF() {
+    if (!filteredSales.length) return alert("Filtra primero");
+    const { jsPDF } = window.jspdf; const doc = new jsPDF();
+    doc.text("Reporte de Ventas", 14, 15);
+    doc.autoTable({ head: [['Fecha', 'Total']], body: filteredSales.map(s => [s.date, '$'+s.total.toLocaleString()]) });
+    doc.save("Reporte.pdf");
+}
+
+function showNewProductModal() {
+    document.getElementById('modal-title').innerText = "Nuevo Producto";
+    document.getElementById('form-id').value = '';
+    document.getElementById('form-product').reset();
+    document.getElementById('form-variants').innerHTML = '';
+    addVariantInput('General');
+    document.getElementById('modal-product').style.display = 'flex';
+}
+
+function addVariantInput(l='', p='') {
+    const div = document.createElement('div');
+    div.style = "display:flex; gap:5px; margin-bottom:8px;";
+    div.innerHTML = `<input type="text" value="${l}" style="flex:2; padding:8px; border-radius:4px; border:1px solid #ddd;" required>
+        <input type="number" value="${p}" style="flex:1; padding:8px; border-radius:4px; border:1px solid #ddd;" required>
+        <button type="button" onclick="this.parentElement.remove()" style="color:red; background:none; border:none;">&times;</button>`;
+    document.getElementById('form-variants').appendChild(div);
+}
+
+document.getElementById('form-product').onsubmit = function(e) {
+    e.preventDefault();
+    const id = document.getElementById('form-id').value;
+    const variants = Array.from(document.querySelectorAll('#form-variants > div')).map(r => ({ label: r.children[0].value, price: parseFloat(r.children[1].value) }));
+    const data = { id: id ? parseInt(id) : Date.now(), name: document.getElementById('form-name').value, stock: parseInt(document.getElementById('form-stock').value), category: document.getElementById('form-category').value, variants };
+    if (id) products[products.findIndex(p => p.id == id)] = data; else products.push(data);
+    localStorage.setItem('pos_data', JSON.stringify(products)); closeModal(); renderProducts();
+};
+
+function deleteProduct(id) { if(confirm("¿Eliminar?")) { products = products.filter(p => p.id !== id); localStorage.setItem('pos_data', JSON.stringify(products)); renderProducts(); } }
+
+function editProduct(id) {
+    const p = products.find(prod => prod.id === id);
+    document.getElementById('modal-title').innerText = "Editar";
+    document.getElementById('form-id').value = p.id; document.getElementById('form-name').value = p.name;
+    document.getElementById('form-stock').value = p.stock; document.getElementById('form-category').value = p.category;
+    document.getElementById('form-variants').innerHTML = ''; p.variants.forEach(v => addVariantInput(v.label, v.price));
+    document.getElementById('modal-product').style.display = 'flex';
+}
+
+function closeModal() { document.getElementById('modal-product').style.display = 'none'; }
+function closeCheckout() { document.getElementById('modal-checkout').style.display = 'none'; }
+</script>
+</body>
+</html>
