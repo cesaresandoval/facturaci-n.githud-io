@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
+	
     <style>
         /* TUS VARIABLES Y ESTILOS GLOBALES ORIGINALES */
         :root {
@@ -40,14 +41,20 @@
         .main-layout { display: grid; grid-template-columns: 1fr 400px; flex: 1; overflow: hidden; }
 
         @media (max-width: 1024px) {
-            .main-layout { grid-template-columns: 1fr; }
-            .cart-section { 
-                position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; 
-                z-index: 1000; border-left: none !important; border-top: 5px solid var(--primary);
-                transform: translateY(100%); transition: transform 0.3s ease;
-            }
-            .cart-section.active-mobile { transform: translateY(0); }
-        }
+			.main-layout { grid-template-columns: 1fr; }
+			.cart-section { 
+				position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; 
+				z-index: 1000; border-left: none !important; border-top: 5px solid var(--primary);
+				transform: translateY(100%); transition: transform 0.3s ease;
+				display: flex !important; /* Asegura que no se oculte por display:none */
+			}
+			/* ESTA ES LA REGLA QUE FALTA */
+			.cart-section.active-mobile { 
+				transform: translateY(0); 
+			}
+			
+			#mobile-cart-btn { display: flex !important; } /* Muestra el botón circular azul */
+		}
 
         .products-section { padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; }
         .section-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
@@ -136,7 +143,7 @@
                 <h3><i data-lucide="shopping-cart"></i> Carrito</h3>
                 <div style="display: flex; gap: 10px;">
                     <button onclick="clearCart()" style="background:none; border:none; color:var(--danger); font-weight:bold; cursor:pointer;">Vaciar</button>
-                    <button id="close-cart-mobile" onclick="toggleMobileCart()" style="display:none; border:none; background:#eee; padding:5px 10px; border-radius:5px;">Cerrar</button>
+                    <button id="close-cart-mobile" onclick="toggleMobileCart()" style="display: block; border: none; background: #eee; padding: 5px 10px; border-radius: 5px;">Cerrar</button>
                 </div>
             </div>
             <div id="cart-list" class="cart-list"></div>
