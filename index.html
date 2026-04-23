@@ -38,7 +38,13 @@
         .nav-btn { padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:none; color:var(--muted); white-space: nowrap; transition: 0.2s; }
         .nav-btn.active { background:white; color:var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-        .main-layout { display: grid; grid-template-columns: 1fr 400px; flex: 1; overflow: hidden; }
+        .main-layout {
+			display: grid;
+			grid-template-columns: 1fr 400px; /* Productos a la izquierda, 400px para el carrito */
+			flex: 1;
+			overflow: hidden;
+			height: calc(100vh - 110px); /* Ajusta según el alto de tu cabecera */
+		}
 
         @media (max-width: 1024px) {
 			.main-layout { grid-template-columns: 1fr; }
@@ -137,7 +143,7 @@
             </div>
             <div id="products-grid" class="products-grid"></div>
         </section>
-		</br></br></br></br></br>
+</br></br></br></br></br>
         <aside class="cart-section" id="cart-aside">
             <div class="cart-header">
                 <h3><i data-lucide="shopping-cart"></i> Carrito</h3>
@@ -191,6 +197,33 @@
             </div>
             <div id="history-box-detail" style="display:none; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0;"></div>
         </div>
+		
+		<div class="card-report" style="border-left: 5px solid #8b5cf6;">
+    <h3>Resumen por Categorías (Caja Específica)</h3>
+    <div style="display:flex; gap:10px; margin:15px 0;">
+        <select id="select-box-category" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);"></select>
+        <button class="btn-primary" style="background:#8b5cf6;" onclick="renderCategoryReport()">Generar Informe</button>
+    </div>
+    <div id="category-report-results" style="display:none; background:#f5f3ff; padding:15px; border-radius:10px; border:1px solid #ddd6fe;">
+			<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+				<thead>
+					<tr style="border-bottom:2px solid #ddd6fe;">
+						<th align="left" style="padding:8px;">Categoría</th>
+						<th align="right">Ventas</th>
+						<th align="right">Total ($)</th>
+					</tr>
+				</thead>
+				<tbody id="table-category-body"></tbody>
+				<tfoot>
+					<tr style="font-weight:bold; border-top:2px solid #ddd6fe;">
+						<td style="padding:8px;">TOTAL</td>
+						<td id="cat-total-qty" align="right">0</td>
+						<td id="cat-total-money" align="right">$ 0</td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+	</div>
 
         <div class="card-report">
             <h3>Exportación General (Rango)</h3>
@@ -281,13 +314,32 @@ document.addEventListener('DOMContentLoaded', () => {
 function toggleView(view) {
     const views = ['view-pos', 'view-caja', 'view-global', 'view-rep'];
     const buttons = ['btn-pos', 'btn-caja', 'btn-global', 'btn-rep'];
+    
+    // Ocultar todas las vistas
     views.forEach(v => document.getElementById(v).style.display = 'none');
     buttons.forEach(b => document.getElementById(b).classList.remove('active'));
     
-    document.getElementById('view-' + view).style.display = (view === 'pos' && window.innerWidth > 1024) ? 'grid' : 'block';
+    const targetView = document.getElementById('view-' + view);
+    
+    // Lógica corregida para evitar el bloqueo
+    if (view === 'pos') {
+        if (window.innerWidth > 1024) {
+            targetView.style.display = 'grid'; // Layout original para PC
+        } else {
+            targetView.style.display = 'flex'; // Usamos flex en móvil para que fluya bien
+            targetView.style.flexDirection = 'column';
+        }
+    } else {
+        targetView.style.display = 'block';
+    }
+
     document.getElementById('btn-' + view).classList.add('active');
+    
     if(['caja','global','rep'].includes(view)) renderReports();
     if(view === 'rep') renderBoxHistoryList();
+    
+    // Actualizar iconos de Lucide por si acaso
+    lucide.createIcons();
 }
 
 // GESTIÓN DE CAJA
@@ -421,13 +473,44 @@ function calculateChange() {
 }
 
 function processFinalSale() {
-    const total = cart.reduce((a,b)=>a+(b.price*b.qty),0);
+    const total = cart.reduce((a, b) => a + (b.price * b.qty), 0);
     const now = new Date();
-    sales.push({ boxId: currentSession.id, date: now.toLocaleDateString('es-ES'), time: now.toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), items: cart.map(i=>`${i.qty}x ${i.name}`).join(', '), total: total, timestamp: now.getTime() });
+    
+    // MODIFICACIÓN: Guardamos los items como un array de objetos con su categoría y precio real
+    const detailedItems = cart.map(i => {
+        const productData = products.find(p => p.id === i.id);
+        return {
+            name: i.name,
+            qty: i.qty,
+            priceAtSale: i.price, // Precio real en el momento de la venta
+            category: productData ? productData.category : "Sin Categoría"
+        };
+    });
+
+    sales.push({ 
+        boxId: currentSession.id, 
+        date: now.toLocaleDateString('es-ES'), 
+        time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
+        items: cart.map(i => `${i.qty}x ${i.name}`).join(', '), // Mantenemos el string para compatibilidad de tablas
+        detailedItems: detailedItems, // Nueva propiedad para el reporte de categorías
+        total: total, 
+        timestamp: now.getTime() 
+    });
+
     localStorage.setItem('pos_sales', JSON.stringify(sales));
-    cart.forEach(i => { products.find(p=>p.id===i.id).stock -= i.qty; });
+    
+    // Descontar stock
+    cart.forEach(i => { 
+        const p = products.find(prod => prod.id === i.id);
+        if(p) p.stock -= i.qty; 
+    });
+    
     localStorage.setItem('pos_data', JSON.stringify(products));
-    cart=[]; renderCart(); renderProducts(); closeCheckout(); alert("Venta Exitosa");
+    cart = []; 
+    renderCart(); 
+    renderProducts(); 
+    closeCheckout(); 
+    alert("Venta Exitosa");
 }
 
 // REPORTES Y MEJORA DE FILTRO
@@ -458,6 +541,17 @@ function renderBoxHistoryList() {
     const ids = [...new Set(sales.map(s => s.boxId))].reverse();
     sel.innerHTML = '<option value="">Seleccione caja...</option>';
     ids.forEach(id => { sel.innerHTML += `<option value="${id}">${id} - (${sales.find(s=>s.boxId===id).date})</option>`; });
+}
+function renderBoxHistoryList() {
+    const sel = document.getElementById('select-box-history');
+    const selCat = document.getElementById('select-box-category'); // Nueva línea
+    const ids = [...new Set(sales.map(s => s.boxId))].reverse();
+    
+    const options = '<option value="">Seleccione caja...</option>' + 
+                    ids.map(id => `<option value="${id}">${id} - (${sales.find(s=>s.boxId===id).date})</option>`).join('');
+    
+    sel.innerHTML = options;
+    selCat.innerHTML = options; // Nueva línea
 }
 
 function loadBoxFromHistory() {
@@ -577,6 +671,69 @@ function deleteProduct(id) { if(confirm("¿Eliminar?")) { products = products.fi
 function closeModal() { document.getElementById('modal-product').style.display = 'none'; }
 function closeCheckout() { document.getElementById('modal-checkout').style.display = 'none'; }
 function toggleMobileCart() { document.getElementById('cart-aside').classList.toggle('active-mobile'); }
+
+function renderCategoryReport() {
+    const boxId = document.getElementById('select-box-category').value;
+    const container = document.getElementById('category-report-results');
+    const tbody = document.getElementById('table-category-body');
+    
+    if(!boxId) return alert("Seleccione una caja");
+
+    const boxSales = sales.filter(s => s.boxId === boxId);
+    let categoryMap = {};
+
+    boxSales.forEach(sale => {
+        // Usamos detailedItems si existe (ventas nuevas) o intentamos procesar el string (ventas viejas)
+        if (sale.detailedItems) {
+            sale.detailedItems.forEach(item => {
+                if (!categoryMap[item.category]) {
+                    categoryMap[item.category] = { qty: 0, total: 0 };
+                }
+                categoryMap[item.category].qty += item.qty;
+                categoryMap[item.category].total += (item.priceAtSale * item.qty);
+            });
+        } else {
+            // Lógica de respaldo para ventas realizadas antes de este cambio
+            const itemParts = sale.items.split(', ');
+            itemParts.forEach(part => {
+                const match = part.match(/(\d+)x\s+(.+)/);
+                if(match) {
+                    const qty = parseInt(match[1]);
+                    const productName = match[2].trim();
+                    const productData = products.find(p => p.name === productName);
+                    const category = productData ? productData.category : "Sin Categoría";
+                    const price = productData ? productData.variants[0].price : 0;
+                    
+                    if(!categoryMap[category]) categoryMap[category] = { qty: 0, total: 0 };
+                    categoryMap[category].qty += qty;
+                    categoryMap[category].total += (price * qty);
+                }
+            });
+        }
+    });
+
+    // Renderizar
+    tbody.innerHTML = '';
+    let grandQty = 0;
+    let grandMoney = 0;
+
+    Object.keys(categoryMap).forEach(cat => {
+        const data = categoryMap[cat];
+        grandQty += data.qty;
+        grandMoney += data.total;
+        
+        tbody.innerHTML += `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px;">${cat}</td>
+                <td align="right">${data.qty}</td>
+                <td align="right">$ ${data.total.toLocaleString()}</td>
+            </tr>`;
+    });
+
+    document.getElementById('cat-total-qty').innerText = grandQty;
+    document.getElementById('cat-total-money').innerText = `$ ${grandMoney.toLocaleString()}`;
+    container.style.display = 'block';
+}
 </script>
 </body>
 </html> 
