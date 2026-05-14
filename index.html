@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SistePOS Pro</title>
+    <title>SistePOS Pro - Sistema Integral</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script> 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
     
-	
-	
-	<style>
+    <style>
     /* 1. VARIABLES Y ESTILOS GLOBALES */
     :root {
         --bg: #f8fafc; --white: #ffffff; --primary: #2563eb; --text: #1e293b; --muted: #64748b;
@@ -41,15 +39,10 @@
 
     /* 2. ESTRUCTURA PRINCIPAL (PC) */
     .main-layout {
-	    /* display: flex; position: relative; display: block; */
-		
-         display: flex;   
-        grid-template-columns: 1fr 400px; /* PRODUCTOS | CARRITO */
-        flex: 1;            /* Toma todo el ancho sobrante */
+        display: flex;   
+        flex: 1;
         overflow: hidden;
         height: calc(100vh - 110px);
-        /*width: 100%;        Ocupa el 80% del ancho del padre */	
-		
     }
 
     /* 3. SECCIONES INTERNAS */
@@ -59,7 +52,7 @@
         display: flex; 
         flex-direction: column;
         height: 100%;
-		width: 80%;
+        flex: 1; /* Ocupa el espacio restante */
     }
 
     .cart-section { 
@@ -69,35 +62,36 @@
         flex-direction: column; 
         height: 100%; 
         overflow: hidden; 
-        position: relative; /* Clave para el grid en PC */
-        transform: none !important;
-        z-index: 10;
-		width: 30%;
+        width: 400px; /* Ancho fijo para el carrito en PC */
+        transition: transform 0.3s ease;
     }
 
-    
+    /* 4. MODULO INVENTARIO ESTILOS */
+    .inventory-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; }
+    .inventory-table th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 0.85rem; color: var(--muted); }
+    .inventory-table td { padding: 12px; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .stock-critical { color: var(--danger); font-weight: bold; background: #fee2e2; padding: 4px 8px; border-radius: 4px; }
+    .stock-warning { color: #854d0e; font-weight: bold; background: #fef9c3; padding: 4px 8px; border-radius: 4px; }
 
-    /* 5. ESTILOS DE COMPONENTES INTERNOS */
-    .section-header { display: flex; justify-content: space-between; margin-bottom: 1rem; }
+    /* 5. ESTILOS GENERALES COMPONENTES */
+    .section-header { display: flex; justify-content: space-between; margin-bottom: 1rem; align-items: center; }
     .search-bar { position: relative; margin-bottom: 1.5rem; }
     .search-bar i { position: absolute; left: 12px; top: 12px; color: var(--muted); }
     .search-bar input { width: 100%; padding: 12px 40px; border: 1px solid var(--border); border-radius: 8px; outline: none; font-size: 16px; }
     
-    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 1rem; }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
     .product-card { background: white; padding: 1rem; border-radius: 12px; border: 1px solid var(--border); display: flex; flex-direction: column; }
     
     .badge { padding: 4px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
     .badge-success { background: #dcfce7; color: #166534; }
     .badge-danger { background: #fee2e2; color: #991b1b; }
     .badge-warning { background: #fef9c3; color: #854d0e; }
-    .price-select { width: 100%; margin: 10px 0; padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: #f8fafc; }
     
     .cart-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; flex-shrink: 0; }
     .cart-list { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; }
     .cart-item { padding: 10px 0; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
     .cart-footer { padding: 1.5rem; border-top: 2px solid var(--text); flex-shrink: 0; background: white; }
     
-    .btn-qty { border: 1px solid var(--border); background: white; width: 32px; height: 32px; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
     .btn-checkout { width: 100%; padding: 1.2rem; background: var(--primary); color: white; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 1.1rem; }
     
     #mobile-cart-btn {
@@ -112,51 +106,23 @@
     
     .view-container { display: none; padding: 1.5rem; overflow-y: auto; flex: 1; }
     .card-report { background: white; padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 1.5rem; }
-    .btn-export-mini { padding: 5px 10px; border-radius: 5px; border: none; font-size: 0.7rem; font-weight: bold; cursor: pointer; color: white; }
-	
-	/* 4. AJUSTES PARA MÓVIL (MAX 1024px) */
-    @media (max-width: 1024px) {
-        .main-layout { 
-            display: block; 
-            position: relative;
-        }
-		
-		.tamano-pantalla {display: none; }
-		
-		.products-section { 
-        
-		width: 100%;
-    }
-		
-        .cart-section { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 80vh; 
-            z-index: 1000; 
-            border-left: none; 
-            border-top: 5px solid var(--primary);
-            border-radius: 20px 20px 0 0;
-            box-shadow: 0 -10px 25px rgba(0,0,0,0.2);
-            transform: translateY(100%) !important; 
-            transition: transform 0.3s ease;
-        }
 
-        .cart-section.active-mobile { 
-            transform: translateY(0) !important; 
+    /* RESPONSIVE */
+    @media (max-width: 1024px) {
+        .main-layout { display: block; position: relative; }
+        .cart-section { 
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 80vh; z-index: 1000; 
+            transform: translateY(100%); border-radius: 20px 20px 0 0; border-top: 5px solid var(--primary);
         }
-        
-        #mobile-cart-btn { display: flex !important; }
+        .cart-section.active-mobile { transform: translateY(0); }
+        #mobile-cart-btn { display: flex; }
     }
-</style>
-	
+    </style>
+</head>
 <body>
-<div class="tamano-pantalla" >Grande</div>
-	
+
 <div class="app-container">
     <div class="session-info-bar">
-		
         <div id="session-status-text">🔴 CAJA CERRADA</div>
         <div id="session-id-text">ID: ---</div>
         <div id="session-clock-text">--:--</div>
@@ -165,14 +131,15 @@
     <header class="main-header">
         <div class="logo">
             <div class="logo-box"><i data-lucide="layout-dashboard"></i></div>
-            <div><h1>SistePOS</h1><p style="font-size: 0.7rem; color: var(--muted);">Punto de Venta</p></div>
+            <div><h1>SistePOS</h1><p style="font-size: 0.7rem; color: var(--muted);">Pro Edition</p></div>
         </div>
         
         <div class="nav-container">
             <button id="btn-pos" class="nav-btn active" onclick="toggleView('pos')">Ventas</button>
-            <button id="btn-caja" class="nav-btn" onclick="toggleView('caja')">Caja en Curso</button>
-            <button id="btn-global" class="nav-btn" onclick="toggleView('global')">Ventas Globales</button>
-            <button id="btn-rep" class="nav-btn" onclick="toggleView('rep')">Reportes</button>
+            <button id="btn-inventario" class="nav-btn" onclick="toggleView('inventario')">Inventario</button>
+            <button id="btn-caja" class="nav-btn" onclick="toggleView('caja')">Caja</button>
+            <button id="btn-global" class="nav-btn" onclick="toggleView('global')">Ventas Hoy</button>
+            <button id="btn-rep" class="nav-btn" onclick="toggleView('rep')">Historial</button>
             <button id="btn-cash-action" onclick="handleCashManagement()" style="padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:#10b981; color:white; margin-left:5px;">Abrir Caja</button>
         </div>
 
@@ -182,26 +149,25 @@
         </div>
     </header>
 
-    <main class="main-layout" id="view-pos"  >
-        <section class="products-section" ">
+    <main class="main-layout" id="view-pos">
+        <section class="products-section">
             <div class="section-header">
-                <h2>Productos</h2>
+                <h2>Catálogo de Productos</h2>
                 <button class="btn-primary" onclick="showNewProductModal()">+ Nuevo</button>
             </div>
             <div class="search-bar">
-                <i data-lucide="search"  ></i>
-                <input type="text" id="search-input" placeholder="Buscar producto..." oninput="renderProducts()" >
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="Buscar producto..." oninput="renderProducts()">
             </div>
             <div id="products-grid" class="products-grid"></div>
         </section>
-</br></br></br></br></br>
 
-        <aside class="cart-section" id="cart-aside"  >
-            <div class="cart-header"  >
-                <h3><i data-lucide="shopping-cart" ></i> Carrito</h3>
-                <div style="display: flex; gap: 10px;" >
+        <aside class="cart-section" id="cart-aside">
+            <div class="cart-header">
+                <h3><i data-lucide="shopping-cart"></i> Carrito</h3>
+                <div style="display: flex; gap: 10px;">
                     <button onclick="clearCart()" style="background:none; border:none; color:var(--danger); font-weight:bold; cursor:pointer;">Vaciar</button>
-                    <button id="close-cart-mobile" onclick="toggleMobileCart()" style="display: block; border: none; background: #eee; padding: 5px 10px; border-radius: 5px;">Cerrar</button>
+                    <button id="close-cart-mobile" onclick="toggleMobileCart()" style="border: none; background: #eee; padding: 5px 10px; border-radius: 5px;">Cerrar</button>
                 </div>
             </div>
             <div id="cart-list" class="cart-list"></div>
@@ -216,15 +182,43 @@
         <button id="mobile-cart-btn" onclick="toggleMobileCart()"><i data-lucide="shopping-bag"></i></button>
     </main>
 
+    <main class="view-container" id="view-inventario">
+        <div class="section-header">
+            <h2>Control de Stock</h2>
+            <button class="btn-primary" style="background:#0f172a;" onclick="exportInventoryExcel()">📦 Exportar Excel</button>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <div class="card-report" style="margin:0; border-left: 5px solid var(--primary);">
+                <p style="font-size:0.7rem; color:var(--muted);">VALOR TOTAL INVENTARIO</p>
+                <h2 id="inv-total-value">$ 0</h2>
+            </div>
+            <div class="card-report" style="margin:0; border-left: 5px solid var(--danger);">
+                <p style="font-size:0.7rem; color:var(--muted);">PRODUCTOS CRÍTICOS</p>
+                <h2 id="inv-low-stock-count">0</h2>
+            </div>
+        </div>
+        <div class="card-report">
+            <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input type="text" id="inv-search" placeholder="Filtrar inventario..." oninput="renderInventory()">
+            </div>
+            <table class="inventory-table">
+                <thead>
+                    <tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th align="right">Valorización</th></tr>
+                </thead>
+                <tbody id="table-inventory-body"></tbody>
+            </table>
+        </div>
+    </main>
 
     <main class="view-container" id="view-caja">
         <div class="card-report" style="border-left: 5px solid #10b981;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <h3>Caja Actual en Curso</h3>
-                <span id="rep-current-id-label" style="font-family:'JetBrains Mono'; font-size:0.8rem; background:#f1f5f9; padding:4px 8px; border-radius:5px;">ID: ---</span>
+                <span id="rep-current-id-label" style="font-family:'JetBrains Mono';">ID: ---</span>
             </div>
-            <h1 id="rep-current-cash-total" style="color:#10b981; font-family:'JetBrains Mono'; margin-bottom:15px;">$ 0</h1>
-            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <h1 id="rep-current-cash-total" style="color:#10b981;">$ 0</h1>
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:15px;">
                 <thead style="background:#f8fafc;"><tr><th align="left" style="padding:8px;">Hora</th><th align="left">Items</th><th align="right">Total</th></tr></thead>
                 <tbody id="table-current-box-sales"></tbody>
             </table>
@@ -233,9 +227,9 @@
 
     <main class="view-container" id="view-global">
         <div class="card-report" style="border-left: 5px solid var(--primary);">
-            <h3>Ventas Globales (Hoy)</h3>
-            <h1 id="rep-total-today" style="color:var(--primary); font-family:'JetBrains Mono'; margin:10px 0;">$ 0</h1>
-            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+            <h3>Resumen Ventas Hoy</h3>
+            <h1 id="rep-total-today" style="color:var(--primary);">$ 0</h1>
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:15px;">
                 <tbody id="table-rep-today"></tbody>
             </table>
         </div>
@@ -243,78 +237,26 @@
 
     <main class="view-container" id="view-rep">
         <div class="card-report">
-            <h3>Archivo de Cajas Cerradas</h3>
-            <div style="display:flex; gap:10px; margin:15px 0;">
-                <select id="select-box-history" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);"></select>
-                <button class="btn-primary" onclick="loadBoxFromHistory()">Ver Detalle</button>
+            <h3>Filtro por Rango de Fechas</h3>
+            <div style="display:flex; gap:10px; margin-top:15px;">
+                <input type="date" id="rep-date-start" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                <input type="date" id="rep-date-end" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);">
+                <button class="btn-primary" onclick="filterHistory()">Filtrar</button>
             </div>
-            <div id="history-box-detail" style="display:none; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0;"></div>
-        </div>
-		
-		<div class="card-report" style="border-left: 5px solid #8b5cf6;">
-    <h3>Resumen por Categorías (Caja Específica)</h3>
-    <div style="display:flex; gap:10px; margin:15px 0;">
-        <select id="select-box-category" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);"></select>
-        <button class="btn-primary" style="background:#8b5cf6;" onclick="renderCategoryReport()">Generar Informe</button>
-    </div>
-    <div id="category-report-results" style="display:none; background:#f5f3ff; padding:15px; border-radius:10px; border:1px solid #ddd6fe;">
-			<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
-				<thead>
-					<tr style="border-bottom:2px solid #ddd6fe;">
-						<th align="left" style="padding:8px;">Categoría</th>
-						<th align="right">Ventas</th>
-						<th align="right">Total ($)</th>
-					</tr>
-				</thead>
-				<tbody id="table-category-body"></tbody>
-				<tfoot>
-					<tr style="font-weight:bold; border-top:2px solid #ddd6fe;">
-						<td style="padding:8px;">TOTAL</td>
-						<td id="cat-total-qty" align="right">0</td>
-						<td id="cat-total-money" align="right">$ 0</td>
-					</tr>
-				</tfoot>
-			</table>
-		</div>
-	</div>
-
-        <div class="card-report">
-            <h3>Exportación General (Rango)</h3>
-            <div style="display:flex; flex-direction:column; gap:10px; margin:10px 0;">
-                <div style="display:flex; gap:5px;">
-                    <input type="date" id="rep-date-start" style="padding:10px; border:1px solid var(--border); border-radius:8px; flex:1;">
-                    <input type="date" id="rep-date-end" style="padding:10px; border:1px solid var(--border); border-radius:8px; flex:1;">
-                </div>
-                <button class="btn-primary" onclick="filterHistory()">Filtrar e Inspeccionar</button>
-            </div>
-            
-            <div id="range-results-ui" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-                    <div style="background: #f1f5f9; padding: 15px; border-radius: 10px;">
-                        <p style="font-size: 0.7rem; color: var(--muted); font-weight: bold; margin-bottom: 5px;">CANTIDAD DE VENTAS</p>
-                        <h2 id="range-results-count" style="font-family: 'JetBrains Mono';">0</h2>
+            <div id="range-results-ui" style="display:none; margin-top:20px;">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
+                    <div style="background:#f1f5f9; padding:15px; border-radius:10px;">
+                        <p style="font-size:0.7rem; color:var(--muted);">VENTAS</p>
+                        <h2 id="range-results-count">0</h2>
                     </div>
-                    <div style="background: var(--success-bg); padding: 15px; border-radius: 10px; border: 1px solid #bbf7d0;">
-                        <p style="font-size: 0.7rem; color: var(--success-text); font-weight: bold; margin-bottom: 5px;">VALOR TOTAL ACUMULADO</p>
-                        <h2 id="range-results-total" style="font-family: 'JetBrains Mono'; color: var(--success-text);">$ 0</h2>
+                    <div style="background:var(--success-bg); padding:15px; border-radius:10px;">
+                        <p style="font-size:0.7rem; color:var(--success-text);">VALOR TOTAL</p>
+                        <h2 id="range-results-total">$ 0</h2>
                     </div>
                 </div>
-
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <h4 id="range-results-title">Detalle de Ventas</h4>
-                    <div style="display:flex; gap:5px;">
-                        <button onclick="exportExcel()" style="padding:8px 12px; background:#166534; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;">Excel</button>
-                        <button onclick="exportPDF()" style="padding:8px 12px; background:#991b1b; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;">PDF</button>
-                    </div>
-                </div>
-                <div style="max-height:300px; overflow-y:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                        <thead style="background:#f1f5f9; position:sticky; top:0;">
-                            <tr><th align="left" style="padding:8px;">Fecha/Hora</th><th>Caja</th><th>Items</th><th align="right">Subtotal</th></tr>
-                        </thead>
-                        <tbody id="table-range-results"></tbody>
-                    </table>
-                </div>
+                <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                    <tbody id="table-range-results"></tbody>
+                </table>
             </div>
         </div>
     </main>
@@ -345,10 +287,28 @@
     </div>
 </div>
 
-<div id="modal-product" class="modal"><div class="modal-content"><h2 id="modal-title">Producto</h2><form id="form-product" style="margin-top:15px;"><input type="hidden" id="form-id"><div style="margin-bottom:1rem;"><label>Nombre</label><input type="text" id="form-name" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" required></div><div id="form-variants"></div><button type="button" class="btn-add-var" onclick="addVariantInput()" style="width:100%; padding:8px; margin:10px 0; border:1px dashed var(--primary); color:var(--primary); cursor:pointer;">+ Variante</button><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><div><label>Stock</label><input type="number" id="form-stock" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" required></div><div><label>Categoría</label><input type="text" id="form-category" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" required></div></div><div style="display:flex; gap:10px; margin-top:20px;"><button type="button" onclick="closeModal()" style="flex:1; padding:10px; border-radius:6px;">Cancelar</button><button type="submit" class="btn-primary" style="flex:1;">Guardar</button></div></form></div></div>
+<div id="modal-product" class="modal">
+    <div class="modal-content">
+        <h2 id="modal-title">Producto</h2>
+        <form id="form-product" style="margin-top:15px;">
+            <input type="hidden" id="form-id">
+            <div style="margin-bottom:1rem;"><label>Nombre</label><input type="text" id="form-name" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" required></div>
+            <div id="form-variants"></div>
+            <button type="button" onclick="addVariantInput()" style="width:100%; padding:8px; margin:10px 0; border:1px dashed var(--primary); color:var(--primary); cursor:pointer; background:none;">+ Variante</button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div><label>Stock Inicial</label><input type="number" id="form-stock" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" required></div>
+                <div><label>Categoría</label><input type="text" id="form-category" style="width:100%; padding:10px; border-radius:6px; border:1px solid #ddd;" required></div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" onclick="closeModal()" style="flex:1; padding:10px; border-radius:6px;">Cancelar</button>
+                <button type="submit" class="btn-primary" style="flex:1;">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <script>
-/* LÓGICA ORIGINAL */
+// --- VARIABLES GLOBALES ---
 let products = JSON.parse(localStorage.getItem('pos_data')) || [
     { id: 1, name: "Hamburguesa", category: "Comida", stock: 15, variants: [{label: "Sencilla", price: 10000}, {label: "Combo", price: 15000}] },
     { id: 2, name: "Refresco", category: "Bebidas", stock: 20, variants: [{label: "Lata 350ml", price: 3500}] }
@@ -358,70 +318,59 @@ let sales = JSON.parse(localStorage.getItem('pos_sales')) || [];
 let currentSession = JSON.parse(localStorage.getItem('pos_session')) || null;
 let filteredSales = [];
 
+// --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     updateSessionUI(); renderProducts(); updateClock();
     setInterval(updateClock, 1000); lucide.createIcons();
 });
 
-// NAVEGACIÓN
+// --- NAVEGACIÓN ---
 function toggleView(view) {
-    const views = ['view-pos', 'view-caja', 'view-global', 'view-rep'];
-    const buttons = ['btn-pos', 'btn-caja', 'btn-global', 'btn-rep'];
+    const views = ['view-pos', 'view-caja', 'view-global', 'view-rep', 'view-inventario'];
+    const buttons = ['btn-pos', 'btn-caja', 'btn-global', 'btn-rep', 'btn-inventario'];
     
-    // Ocultar todas las vistas
     views.forEach(v => document.getElementById(v).style.display = 'none');
     buttons.forEach(b => document.getElementById(b).classList.remove('active'));
     
     const targetView = document.getElementById('view-' + view);
     
-    // Lógica corregida para evitar el bloqueo
     if (view === 'pos') {
-        if (window.innerWidth > 1024) {
-            targetView.style.display = 'grid'; // Layout original para PC
-        } else {
-            targetView.style.display = 'flex'; // Usamos flex en móvil para que fluya bien
-            targetView.style.flexDirection = 'column';
-        }
+        targetView.style.display = window.innerWidth > 1024 ? 'flex' : 'block';
     } else {
         targetView.style.display = 'block';
     }
 
     document.getElementById('btn-' + view).classList.add('active');
     
+    if(view === 'inventario') renderInventory();
     if(['caja','global','rep'].includes(view)) renderReports();
-    if(view === 'rep') renderBoxHistoryList();
-    
-    // Actualizar iconos de Lucide por si acaso
     lucide.createIcons();
 }
 
-// GESTIÓN DE CAJA
+// --- GESTIÓN DE CAJA ---
 function updateSessionUI() {
     const btn = document.getElementById('btn-cash-action');
     const status = document.getElementById('session-status-text');
     const idTxt = document.getElementById('session-id-text');
-    const clockTxt = document.getElementById('session-clock-text');
     if(currentSession) {
         btn.innerText = "Cerrar Caja"; btn.style.background = "var(--danger)";
         status.innerText = "🟢 ABIERTA"; status.style.color = "#4ade80";
         idTxt.innerText = "ID: " + currentSession.id;
-        clockTxt.innerText = "Desde: " + currentSession.startTime;
     } else {
         btn.innerText = "Abrir Caja"; btn.style.background = "#10b981";
         status.innerText = "🔴 CERRADA"; status.style.color = "#f87171";
-        idTxt.innerText = "ID: ---"; clockTxt.innerText = "--:--";
+        idTxt.innerText = "ID: ---";
     }
 }
 
 function handleCashManagement() {
     if(!currentSession) document.getElementById('modal-cash-open').style.display='flex';
-    else if(confirm("¿Cerrar caja?")) { currentSession = null; localStorage.removeItem('pos_session'); updateSessionUI(); }
+    else if(confirm("¿Cerrar caja actual?")) { currentSession = null; localStorage.removeItem('pos_session'); updateSessionUI(); }
 }
 
 function confirmOpenCash() {
     const amount = parseFloat(document.getElementById('cash-initial-amount').value) || 0;
-    const id = "BOX-" + Date.now().toString().slice(-6);
-    currentSession = { id, base: amount, startTime: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), date: new Date().toLocaleDateString('es-ES') };
+    currentSession = { id: "BOX-" + Date.now().toString().slice(-6), base: amount, startTime: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString('es-ES') };
     localStorage.setItem('pos_session', JSON.stringify(currentSession));
     updateSessionUI(); document.getElementById('modal-cash-open').style.display='none';
 }
@@ -432,7 +381,7 @@ function updateClock() {
     document.getElementById('txt-clock').innerText = now.toLocaleTimeString('es-ES');
 }
 
-// PRODUCTOS
+// --- PRODUCTOS ---
 function renderProducts() {
     const grid = document.getElementById('products-grid');
     const search = document.getElementById('search-input').value.toLowerCase();
@@ -441,54 +390,55 @@ function renderProducts() {
         const sClass = p.stock <= 0 ? 'badge-danger' : (p.stock <= 5 ? 'badge-warning' : 'badge-success');
         grid.innerHTML += `
             <div class="product-card">
-                <div style="display:flex; gap:10px;">
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
                     <div style="background:#f1f5f9; padding:8px; border-radius:8px;"><i data-lucide="package"></i></div>
-                    <div><h3 style="font-size:0.95rem;">${p.name}</h3><p style="font-size:0.75rem;">${p.category}</p></div>
+                    <div><h3 style="font-size:0.9rem;">${p.name}</h3><p style="font-size:0.7rem; color:var(--muted);">${p.category}</p></div>
                 </div>
-                <select id="sel-price-${p.id}" class="price-select">
+                <select id="sel-price-${p.id}" style="width:100%; margin-bottom:10px; padding:5px; border-radius:5px;">
                     ${p.variants.map((v, i) => `<option value="${i}">${v.label} - $${v.price}</option>`).join('')}
                 </select>
                 <div style="display:flex; justify-content:space-between; align-items:center;"><span class="badge ${sClass}">Stock: ${p.stock}</span></div>
                 <div style="display:flex; gap:5px; margin-top:10px; border-top:1px solid #eee; padding-top:10px;">
-                    <button onclick="editProduct(${p.id})" style="flex:1; padding:8px; border:1px solid #ddd; background:none; border-radius:6px;"><i data-lucide="edit-3" style="width:16px;"></i></button>
-                    <button onclick="deleteProduct(${p.id})" style="flex:1; padding:8px; border:1px solid #ddd; background:none; border-radius:6px; color:var(--danger);"><i data-lucide="trash-2" style="width:16px;"></i></button>
-                    <button onclick="addToCart(${p.id})" class="btn-primary" style="padding:8px; font-size:0.75rem;">🛒 Añadir</button>
+                    <button onclick="editProduct(${p.id})" style="flex:1; padding:8px; border:1px solid #ddd; background:none; border-radius:6px;"><i data-lucide="edit-3" style="width:14px;"></i></button>
+                    <button onclick="addToCart(${p.id})" class="btn-primary" style="padding:8px 15px; font-size:0.8rem;">Añadir</button>
                 </div>
             </div>`;
     });
     lucide.createIcons();
 }
 
-// CARRITO Y VENTA
+// --- CARRITO ---
 function addToCart(id) {
-    if(!currentSession) return alert("❌ Abra caja primero.");
+    if(!currentSession) return alert("❌ Debe abrir caja primero.");
     const p = products.find(x => x.id === id);
+    if(p.stock <= 0) return alert("Sin stock");
     const vIdx = document.getElementById(`sel-price-${id}`).value;
     const variant = p.variants[vIdx];
     const existing = cart.find(i => i.id === id && i.label === variant.label);
     if(existing) { if(existing.qty < p.stock) existing.qty++; }
-    else if(p.stock > 0) cart.push({...variant, name: p.name, id: p.id, qty: 1});
+    else cart.push({...variant, name: p.name, id: p.id, qty: 1});
     renderCart();
 }
 
 function renderCart() {
     const list = document.getElementById('cart-list'); let total = 0;
-    list.innerHTML = cart.length ? '' : '<p style="text-align:center; color:var(--muted); margin-top:20px;">Vacío</p>';
+    list.innerHTML = cart.length ? '' : '<p style="text-align:center; margin-top:20px; color:var(--muted);">El carrito está vacío</p>';
     cart.forEach((item, idx) => {
         total += item.price * item.qty;
         list.innerHTML += `<div class="cart-item">
-            <div style="display:flex; justify-content:space-between;"><strong>${item.name}</strong><span>$${(item.price * item.qty).toLocaleString()}</span></div>
+            <div style="display:flex; justify-content:space-between;"><strong>${item.name} (${item.label})</strong><span>$${(item.price * item.qty).toLocaleString()}</span></div>
             <div style="display:flex; align-items:center; gap:10px; margin-top:5px;">
-                <button class="btn-qty" onclick="updateQty(${idx},-1)">-</button><span>${item.qty}</span><button class="btn-qty" onclick="updateQty(${idx},1)">+</button>
-                <button onclick="removeItem(${idx})" style="margin-left:auto; border:none; background:none; color:var(--danger); cursor:pointer;"><i data-lucide="trash-2" style="width:18px;"></i></button>
+                <button onclick="updateQty(${idx},-1)" style="width:25px;">-</button><span>${item.qty}</span><button onclick="updateQty(${idx},1)" style="width:25px;">+</button>
+                <button onclick="removeItem(${idx})" style="margin-left:auto; border:none; background:none; color:var(--danger); cursor:pointer;"><i data-lucide="trash-2" style="width:16px;"></i></button>
             </div></div>`;
     });
-    document.getElementById('cart-total').innerText = `$ ${total.toLocaleString()}`; lucide.createIcons();
+    document.getElementById('cart-total').innerText = `$ ${total.toLocaleString()}`;
+    lucide.createIcons();
 }
 
 function updateQty(idx, val) {
     const item = cart[idx]; const p = products.find(prod => prod.id === item.id);
-    if(val > 0 && item.qty >= p.stock) return;
+    if(val > 0 && item.qty >= p.stock) return alert("Máximo stock alcanzado");
     item.qty += val; if(item.qty <= 0) cart.splice(idx,1);
     renderCart();
 }
@@ -496,6 +446,7 @@ function updateQty(idx, val) {
 function removeItem(idx) { cart.splice(idx,1); renderCart(); }
 function clearCart() { cart = []; renderCart(); }
 
+// --- COBRO ---
 function openCheckoutModal() {
     if(!cart.length) return;
     const total = cart.reduce((a,b)=>a+(b.price*b.qty),0);
@@ -503,7 +454,7 @@ function openCheckoutModal() {
     document.getElementById('cash-received').value = '';
     const grid = document.getElementById('quick-grid');
     const opts = [total, 10000, 20000, 50000, 100000];
-    grid.innerHTML = opts.map(o => `<button style="padding:12px; border:1px solid #ddd; background:#f1f5f9; border-radius:8px; cursor:pointer; font-weight:bold;" onclick="setCash(${o})">$ ${o.toLocaleString()}</button>`).join('');
+    grid.innerHTML = opts.map(o => `<button style="padding:10px; border-radius:8px; cursor:pointer;" onclick="setCash(${o})">$ ${o.toLocaleString()}</button>`).join('');
     document.getElementById('modal-checkout').style.display='flex'; calculateChange();
 }
 
@@ -512,15 +463,13 @@ function setCash(a) { document.getElementById('cash-received').value = a; calcul
 function calculateChange() {
     const t = cart.reduce((a,b)=>a+(b.price*b.qty),0);
     const r = parseFloat(document.getElementById('cash-received').value) || 0;
-    const diff = r - t; const box = document.getElementById('change-box');
-    const btn = document.getElementById('btn-confirm-pay');
+    const diff = r - t; const btn = document.getElementById('btn-confirm-pay');
+    const box = document.getElementById('change-box');
     if(diff >= 0) {
-        box.style.background='#dcfce7'; box.style.color='#166534';
-        document.getElementById('change-label').innerText="Cambio"; document.getElementById('change-value').innerText=`$ ${diff.toLocaleString()}`;
+        box.style.background='#dcfce7'; document.getElementById('change-value').innerText=`$ ${diff.toLocaleString()}`;
         btn.disabled=false; btn.style.background='var(--primary)';
     } else {
-        box.style.background='#fee2e2'; box.style.color='#991b1b';
-        document.getElementById('change-label').innerText="Faltan"; document.getElementById('change-value').innerText=`$ ${Math.abs(diff).toLocaleString()}`;
+        box.style.background='#fee2e2'; document.getElementById('change-value').innerText=`$ ${Math.abs(diff).toLocaleString()} Faltan`;
         btn.disabled=true; btn.style.background='#eee';
     }
 }
@@ -529,161 +478,94 @@ function processFinalSale() {
     const total = cart.reduce((a, b) => a + (b.price * b.qty), 0);
     const now = new Date();
     
-    // MODIFICACIÓN: Guardamos los items como un array de objetos con su categoría y precio real
-    const detailedItems = cart.map(i => {
-        const productData = products.find(p => p.id === i.id);
-        return {
-            name: i.name,
-            qty: i.qty,
-            priceAtSale: i.price, // Precio real en el momento de la venta
-            category: productData ? productData.category : "Sin Categoría"
-        };
-    });
-
-    sales.push({ 
+    const saleData = { 
         boxId: currentSession.id, 
         date: now.toLocaleDateString('es-ES'), 
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-        items: cart.map(i => `${i.qty}x ${i.name}`).join(', '), // Mantenemos el string para compatibilidad de tablas
-        detailedItems: detailedItems, // Nueva propiedad para el reporte de categorías
+        items: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
         total: total, 
         timestamp: now.getTime() 
-    });
+    };
 
+    sales.push(saleData);
     localStorage.setItem('pos_sales', JSON.stringify(sales));
     
-    // Descontar stock
     cart.forEach(i => { 
         const p = products.find(prod => prod.id === i.id);
         if(p) p.stock -= i.qty; 
     });
     
     localStorage.setItem('pos_data', JSON.stringify(products));
-    cart = []; 
-    renderCart(); 
-    renderProducts(); 
-    closeCheckout(); 
-    alert("Venta Exitosa");
+    cart = []; renderCart(); renderProducts(); closeCheckout(); alert("Venta Exitosa");
 }
 
-// REPORTES Y MEJORA DE FILTRO
+// --- MÓDULO INVENTARIO ---
+function renderInventory() {
+    const tbody = document.getElementById('table-inventory-body');
+    const search = document.getElementById('inv-search').value.toLowerCase();
+    let totalVal = 0; let lowStock = 0;
+    tbody.innerHTML = '';
+    products.filter(p => p.name.toLowerCase().includes(search)).forEach(p => {
+        const price = p.variants[0]?.price || 0;
+        const subtotal = price * p.stock;
+        totalVal += subtotal;
+        let sClass = p.stock <= 0 ? 'stock-critical' : (p.stock <= 5 ? 'stock-warning' : '');
+        if(p.stock <= 5) lowStock++;
+        
+        tbody.innerHTML += `<tr>
+            <td><strong>${p.name}</strong></td>
+            <td>${p.category}</td>
+            <td>$ ${price.toLocaleString()}</td>
+            <td><span class="${sClass}">${p.stock}</span></td>
+            <td align="right">$ ${subtotal.toLocaleString()}</td>
+        </tr>`;
+    });
+    document.getElementById('inv-total-value').innerText = `$ ${totalVal.toLocaleString()}`;
+    document.getElementById('inv-low-stock-count').innerText = lowStock;
+}
+
+function exportInventoryExcel() {
+    const ws = XLSX.utils.json_to_sheet(products.map(p => ({ Nombre: p.name, Categoría: p.category, Stock: p.stock, Valor: p.variants[0]?.price })));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Stock");
+    XLSX.writeFile(wb, "Inventario_SistePOS.xlsx");
+}
+
+// --- REPORTES ---
 function renderReports() {
     const today = new Date().toLocaleDateString('es-ES');
+    // Caja Actual
     const tableC = document.getElementById('table-current-box-sales');
     const totalC = document.getElementById('rep-current-cash-total');
-    const labelId = document.getElementById('rep-current-id-label');
     tableC.innerHTML = '';
     if(currentSession) {
-        labelId.innerText = "ID: " + currentSession.id;
         const cSales = sales.filter(s => s.boxId === currentSession.id);
         let sum = 0;
         cSales.forEach(s => { sum += s.total; tableC.innerHTML += `<tr><td style="padding:8px;">${s.time}</td><td>${s.items}</td><td align="right">$${s.total.toLocaleString()}</td></tr>`; });
         totalC.innerText = `$ ${sum.toLocaleString()}`;
-    } else { labelId.innerText="Caja Cerrada"; totalC.innerText="$ 0"; }
-
+    }
+    // Global Hoy
     const tableH = document.getElementById('table-rep-today');
-    const totalH = document.getElementById('rep-total-today');
     const hSales = sales.filter(s => s.date === today);
     tableH.innerHTML = ''; let sumH = 0;
     hSales.forEach(s => { sumH += s.total; tableH.innerHTML += `<tr><td style="padding:8px;">${s.time}</td><td>${s.items}</td><td align="right">$${s.total.toLocaleString()}</td></tr>`; });
-    totalH.innerText = `$ ${sumH.toLocaleString()}`;
+    document.getElementById('rep-total-today').innerText = `$ ${sumH.toLocaleString()}`;
 }
 
-function renderBoxHistoryList() {
-    const sel = document.getElementById('select-box-history');
-    const ids = [...new Set(sales.map(s => s.boxId))].reverse();
-    sel.innerHTML = '<option value="">Seleccione caja...</option>';
-    ids.forEach(id => { sel.innerHTML += `<option value="${id}">${id} - (${sales.find(s=>s.boxId===id).date})</option>`; });
-}
-function renderBoxHistoryList() {
-    const sel = document.getElementById('select-box-history');
-    const selCat = document.getElementById('select-box-category'); // Nueva línea
-    const ids = [...new Set(sales.map(s => s.boxId))].reverse();
-    
-    const options = '<option value="">Seleccione caja...</option>' + 
-                    ids.map(id => `<option value="${id}">${id} - (${sales.find(s=>s.boxId===id).date})</option>`).join('');
-    
-    sel.innerHTML = options;
-    selCat.innerHTML = options; // Nueva línea
-}
-
-function loadBoxFromHistory() {
-    const id = document.getElementById('select-box-history').value;
-    const container = document.getElementById('history-box-detail');
-    if(!id) return;
-    const boxS = sales.filter(s => s.boxId === id); const sum = boxS.reduce((a,b)=>a+b.total,0);
-    container.style.display='block';
-    container.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><strong>ID: ${id}</strong><div style="display:flex; gap:5px;"><button class="btn-export-mini" style="background:#166534;" onclick="exportSingleBoxExcel('${id}')">Excel</button><button class="btn-export-mini" style="background:#991b1b;" onclick="exportSingleBoxPDF('${id}')">PDF</button></div></div><h2 style="color:var(--primary);">$ ${sum.toLocaleString()}</h2><table style="width:100%; font-size:0.8rem;">${boxS.map(s=>`<tr><td>${s.time}</td><td>${s.items}</td><td align="right">$${s.total.toLocaleString()}</td></tr>`).join('')}</table>`;
-}
-
-// --- MEJORA SOLICITADA: FILTRAR Y SUMAR TOTAL ---
 function filterHistory() {
     const startVal = document.getElementById('rep-date-start').value;
     const endVal = document.getElementById('rep-date-end').value;
     if(!startVal || !endVal) return alert("Seleccione fechas");
-    
     const start = new Date(startVal + 'T00:00:00').getTime();
     const end = new Date(endVal + 'T23:59:59').getTime();
-    
     filteredSales = sales.filter(s => s.timestamp >= start && s.timestamp <= end);
-    
-    const ui = document.getElementById('range-results-ui');
     const tbody = document.getElementById('table-range-results');
-    
-    if(filteredSales.length > 0) {
-        ui.style.display = 'block';
-        
-        // CALCULO DE MEJORA: Suma de todos los subtotales del rango
-        const totalDinero = filteredSales.reduce((acc, s) => acc + s.total, 0);
-        
-        document.getElementById('range-results-count').innerText = filteredSales.length;
-        document.getElementById('range-results-total').innerText = `$ ${totalDinero.toLocaleString()}`;
-        
-        tbody.innerHTML = filteredSales.map(s => `
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:8px;">${s.date}<br><small>${s.time}</small></td>
-                <td><small>${s.boxId}</small></td>
-                <td>${s.items}</td>
-                <td align="right"><strong>$${s.total.toLocaleString()}</strong></td>
-            </tr>
-        `).join('');
-    } else {
-        ui.style.display = 'none';
-        alert("No se encontraron registros en este rango.");
-    }
+    document.getElementById('range-results-ui').style.display = 'block';
+    document.getElementById('range-results-count').innerText = filteredSales.length;
+    document.getElementById('range-results-total').innerText = `$ ${filteredSales.reduce((a,b)=>a+b.total,0).toLocaleString()}`;
+    tbody.innerHTML = filteredSales.map(s => `<tr><td style="padding:8px;">${s.date} ${s.time}</td><td>${s.items}</td><td align="right"><strong>$${s.total.toLocaleString()}</strong></td></tr>`).join('');
 }
 
-function exportExcel() {
-    const data = filteredSales.length ? filteredSales : sales;
-    const ws = XLSX.utils.json_to_sheet(data.map(s=>({"Fecha":s.date, "Caja":s.boxId, "Items":s.items, "Total":s.total})));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas");
-    XLSX.writeFile(wb, "Reporte_General.xlsx");
-}
-
-function exportPDF() {
-    const data = filteredSales.length ? filteredSales : sales;
-    const { jsPDF } = window.jspdf; const doc = new jsPDF();
-    doc.text("Reporte SistePOS", 14, 15);
-    doc.autoTable({ head:[['Fecha','Caja','Total']], body: data.map(s=>[s.date, s.boxId, '$'+s.total.toLocaleString()]) });
-    doc.save("Reporte_General.pdf");
-}
-
-function exportSingleBoxExcel(boxId) {
-    const bSales = sales.filter(s => s.boxId === boxId);
-    const ws = XLSX.utils.json_to_sheet(bSales.map(s=>({"Hora":s.time, "Items":s.items, "Subtotal":s.total})));
-    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Cierre");
-    XLSX.writeFile(wb, `Cierre_${boxId}.xlsx`);
-}
-
-function exportSingleBoxPDF(boxId) {
-    const bSales = sales.filter(s => s.boxId === boxId);
-    const { jsPDF } = window.jspdf; const doc = new jsPDF();
-    doc.text(`Cierre de Caja: ${boxId}`, 14, 15);
-    doc.autoTable({ head:[['Hora','Productos','Total']], body: bSales.map(s=>[s.time, s.items, '$'+s.total.toLocaleString()]) });
-    doc.save(`Cierre_${boxId}.pdf`);
-}
-
-// MODALES PRODUCTOS
+// --- UTILIDADES ---
 function showNewProductModal() {
     document.getElementById('modal-title').innerText = "Nuevo Producto";
     document.getElementById('form-id').value = '';
@@ -696,9 +578,9 @@ function showNewProductModal() {
 function addVariantInput(l='', p='') {
     const div = document.createElement('div');
     div.style = "display:flex; gap:5px; margin-bottom:8px;";
-    div.innerHTML = `<input type="text" value="${l}" placeholder="Etiqueta" style="flex:2; padding:8px; border-radius:4px; border:1px solid #ddd;" required>
-        <input type="number" value="${p}" placeholder="Precio" style="flex:1; padding:8px; border-radius:4px; border:1px solid #ddd;" required>
-        <button type="button" onclick="this.parentElement.remove()" style="color:red; background:none; border:none; cursor:pointer;">&times;</button>`;
+    div.innerHTML = `<input type="text" value="${l}" placeholder="Tipo" style="flex:2; padding:8px;" required>
+        <input type="number" value="${p}" placeholder="Precio" style="flex:1; padding:8px;" required>
+        <button type="button" onclick="this.parentElement.remove()" style="color:red; background:none; border:none;">&times;</button>`;
     document.getElementById('form-variants').appendChild(div);
 }
 
@@ -713,80 +595,17 @@ document.getElementById('form-product').onsubmit = function(e) {
 
 function editProduct(id) {
     const p = products.find(prod => prod.id === id);
-    document.getElementById('modal-title').innerText = "Editar";
+    document.getElementById('modal-title').innerText = "Editar Producto";
     document.getElementById('form-id').value = p.id; document.getElementById('form-name').value = p.name;
     document.getElementById('form-stock').value = p.stock; document.getElementById('form-category').value = p.category;
     document.getElementById('form-variants').innerHTML = ''; p.variants.forEach(v => addVariantInput(v.label, v.price));
     document.getElementById('modal-product').style.display = 'flex';
 }
 
-function deleteProduct(id) { if(confirm("¿Eliminar?")) { products = products.filter(p => p.id !== id); localStorage.setItem('pos_data', JSON.stringify(products)); renderProducts(); } }
 function closeModal() { document.getElementById('modal-product').style.display = 'none'; }
 function closeCheckout() { document.getElementById('modal-checkout').style.display = 'none'; }
 function toggleMobileCart() { document.getElementById('cart-aside').classList.toggle('active-mobile'); }
-
-function renderCategoryReport() {
-    const boxId = document.getElementById('select-box-category').value;
-    const container = document.getElementById('category-report-results');
-    const tbody = document.getElementById('table-category-body');
-    
-    if(!boxId) return alert("Seleccione una caja");
-
-    const boxSales = sales.filter(s => s.boxId === boxId);
-    let categoryMap = {};
-
-    boxSales.forEach(sale => {
-        // Usamos detailedItems si existe (ventas nuevas) o intentamos procesar el string (ventas viejas)
-        if (sale.detailedItems) {
-            sale.detailedItems.forEach(item => {
-                if (!categoryMap[item.category]) {
-                    categoryMap[item.category] = { qty: 0, total: 0 };
-                }
-                categoryMap[item.category].qty += item.qty;
-                categoryMap[item.category].total += (item.priceAtSale * item.qty);
-            });
-        } else {
-            // Lógica de respaldo para ventas realizadas antes de este cambio
-            const itemParts = sale.items.split(', ');
-            itemParts.forEach(part => {
-                const match = part.match(/(\d+)x\s+(.+)/);
-                if(match) {
-                    const qty = parseInt(match[1]);
-                    const productName = match[2].trim();
-                    const productData = products.find(p => p.name === productName);
-                    const category = productData ? productData.category : "Sin Categoría";
-                    const price = productData ? productData.variants[0].price : 0;
-                    
-                    if(!categoryMap[category]) categoryMap[category] = { qty: 0, total: 0 };
-                    categoryMap[category].qty += qty;
-                    categoryMap[category].total += (price * qty);
-                }
-            });
-        }
-    });
-
-    // Renderizar
-    tbody.innerHTML = '';
-    let grandQty = 0;
-    let grandMoney = 0;
-
-    Object.keys(categoryMap).forEach(cat => {
-        const data = categoryMap[cat];
-        grandQty += data.qty;
-        grandMoney += data.total;
-        
-        tbody.innerHTML += `
-            <tr style="border-bottom:1px solid #eee;">
-                <td style="padding:10px;">${cat}</td>
-                <td align="right">${data.qty}</td>
-                <td align="right">$ ${data.total.toLocaleString()}</td>
-            </tr>`;
-    });
-
-    document.getElementById('cat-total-qty').innerText = grandQty;
-    document.getElementById('cat-total-money').innerText = `$ ${grandMoney.toLocaleString()}`;
-    container.style.display = 'block';
-}
 </script>
+
 </body>
-</html> 
+</html>
