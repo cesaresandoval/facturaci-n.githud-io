@@ -550,11 +550,24 @@ function processFinalSale() {
     const total = cart.reduce((a, b) => a + (b.price * b.qty), 0);
     const now = new Date();
     
+    // 1. Buscamos la categoría real de cada ítem en el carrito para guardarla de forma permanente
+    const detailedItems = cart.map(item => {
+        const productData = products.find(p => p.id === item.id);
+        return {
+            name: item.name,
+            label: item.label,
+            qty: item.qty,
+            priceAtSale: item.price,
+            category: productData ? productData.category : "Sin Categoría"
+        };
+    });
+    
     const saleData = { 
         boxId: currentSession.id, 
         date: now.toLocaleDateString('es-ES'), 
         time: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), 
-        items: cart.map(i => `${i.qty}x ${i.name}`).join(', '),
+        items: cart.map(i => `${i.qty}x ${i.name} (${i.label})`).join(', '), // Agregamos la variante al texto
+        detailedItems: detailedItems, // 👈 Guardamos el desglose exacto
         total: total, 
         timestamp: now.getTime() 
     };
@@ -772,8 +785,8 @@ function renderCategoryReport() {
     let categoryMap = {};
 
     boxSales.forEach(sale => {
-        // Usamos detailedItems si existe (ventas nuevas) o intentamos procesar el string (ventas viejas)
-        if (sale.detailedItems) {
+        // Si la venta tiene el nuevo desglose detallado, sumamos los valores exactos guardados
+        if (sale.detailedItems && sale.detailedItems.length > 0) {
             sale.detailedItems.forEach(item => {
                 if (!categoryMap[item.category]) {
                     categoryMap[item.category] = { qty: 0, total: 0 };
@@ -782,16 +795,18 @@ function renderCategoryReport() {
                 categoryMap[item.category].total += (item.priceAtSale * item.qty);
             });
         } else {
-            // Lógica de respaldo para ventas realizadas antes de este cambio
+            // Lógica de respaldo mejorada para las ventas viejas
             const itemParts = sale.items.split(', ');
             itemParts.forEach(part => {
-                const match = part.match(/(\d+)x\s+(.+)/);
+                const match = part.match(/(\d+)x\s+([^(]+)/); // Extrae cantidad y nombre ignorando paréntesis
                 if(match) {
                     const qty = parseInt(match[1]);
                     const productName = match[2].trim();
                     const productData = products.find(p => p.name === productName);
+                    
                     const category = productData ? productData.category : "Sin Categoría";
-                    const price = productData ? productData.variants[0].price : 0;
+                    // Si no hay variante detallada antigua, usamos el total proporcional de la venta completa
+                    const price = productData ? (productData.variants[0]?.price || 0) : 0;
                     
                     if(!categoryMap[category]) categoryMap[category] = { qty: 0, total: 0 };
                     categoryMap[category].qty += qty;
@@ -801,7 +816,7 @@ function renderCategoryReport() {
         }
     });
 
-    // Renderizar
+    // Renderizar en la interfaz
     tbody.innerHTML = '';
     let grandQty = 0;
     let grandMoney = 0;
