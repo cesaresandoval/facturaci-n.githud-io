@@ -117,6 +117,17 @@
         .cart-section.active-mobile { transform: translateY(0); }
         #mobile-cart-btn { display: flex; }
     }
+	
+	.table-responsive {
+		width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch; /* Suaviza el movimiento en dispositivos iOS (Safari) */
+		margin-top: 10px;
+	}
+	.inventory-table th, .inventory-table td {
+		white-space: nowrap; /* Evita que el texto de las celdas salte de línea */
+	}
+
     </style>
 </head>
 <body>
@@ -136,10 +147,9 @@
         
         <div class="nav-container">
             <button id="btn-pos" class="nav-btn active" onclick="toggleView('pos')">Ventas</button>
+            <button id="btn-caja" class="nav-btn" onclick="toggleView('caja')">Caja</button>            		
             <button id="btn-inventario" class="nav-btn" onclick="toggleView('inventario')">Inventario</button>
-            <button id="btn-caja" class="nav-btn" onclick="toggleView('caja')">Caja</button>
-            <button id="btn-global" class="nav-btn" onclick="toggleView('global')">Ventas Hoy</button>
-            <button id="btn-rep" class="nav-btn" onclick="toggleView('rep')">Historial</button>
+            <button id="btn-rep" class="nav-btn" onclick="toggleView('rep')">Reportes</button>
             <button id="btn-cash-action" onclick="handleCashManagement()" style="padding:8px 12px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; background:#10b981; color:white; margin-left:5px;">Abrir Caja</button>
         </div>
 
@@ -202,12 +212,15 @@
                 <i data-lucide="search"></i>
                 <input type="text" id="inv-search" placeholder="Filtrar inventario..." oninput="renderInventory()">
             </div>
+			
+			<div class="table-responsive">
             <table class="inventory-table">
                 <thead>
                     <tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th align="right">Valorización</th></tr>
                 </thead>
                 <tbody id="table-inventory-body"></tbody>
             </table>
+			</div>
         </div>
     </main>
 
@@ -237,26 +250,78 @@
 
     <main class="view-container" id="view-rep">
         <div class="card-report">
-            <h3>Filtro por Rango de Fechas</h3>
-            <div style="display:flex; gap:10px; margin-top:15px;">
-                <input type="date" id="rep-date-start" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);">
-                <input type="date" id="rep-date-end" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);">
-                <button class="btn-primary" onclick="filterHistory()">Filtrar</button>
+            <h3>Archivo de Cajas Cerradas</h3>
+            <div style="display:flex; gap:10px; margin:15px 0;">
+                <select id="select-box-history" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);"></select>
+                <button class="btn-primary" onclick="loadBoxFromHistory()">Ver Detalle</button>
             </div>
-            <div id="range-results-ui" style="display:none; margin-top:20px;">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px;">
-                    <div style="background:#f1f5f9; padding:15px; border-radius:10px;">
-                        <p style="font-size:0.7rem; color:var(--muted);">VENTAS</p>
-                        <h2 id="range-results-count">0</h2>
+            <div id="history-box-detail" style="display:none; background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0;"></div>
+        </div>
+		
+		<div class="card-report" style="border-left: 5px solid #8b5cf6;">
+    <h3>Resumen por Categorías (Caja Específica)</h3>
+    <div style="display:flex; gap:10px; margin:15px 0;">
+        <select id="select-box-category" style="flex:1; padding:10px; border-radius:8px; border:1px solid var(--border);"></select>
+        <button class="btn-primary" style="background:#8b5cf6;" onclick="renderCategoryReport()">Generar Informe</button>
+    </div>
+    <div id="category-report-results" style="display:none; background:#f5f3ff; padding:15px; border-radius:10px; border:1px solid #ddd6fe;">
+			<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+				<thead>
+					<tr style="border-bottom:2px solid #ddd6fe;">
+						<th align="left" style="padding:8px;">Categoría</th>
+						<th align="right">Ventas</th>
+						<th align="right">Total ($)</th>
+					</tr>
+				</thead>
+				<tbody id="table-category-body"></tbody>
+				<tfoot>
+					<tr style="font-weight:bold; border-top:2px solid #ddd6fe;">
+						<td style="padding:8px;">TOTAL</td>
+						<td id="cat-total-qty" align="right">0</td>
+						<td id="cat-total-money" align="right">$ 0</td>
+					</tr>
+				</tfoot>
+			</table>
+		</div>
+	</div>
+
+        <div class="card-report">
+            <h3>Exportación General (Rango)</h3>
+            <div style="display:flex; flex-direction:column; gap:10px; margin:10px 0;">
+                <div style="display:flex; gap:5px;">
+                    <input type="date" id="rep-date-start" style="padding:10px; border:1px solid var(--border); border-radius:8px; flex:1;">
+                    <input type="date" id="rep-date-end" style="padding:10px; border:1px solid var(--border); border-radius:8px; flex:1;">
+                </div>
+                <button class="btn-primary" onclick="filterHistory()">Filtrar e Inspeccionar</button>
+            </div>
+            
+            <div id="range-results-ui" style="display:none; margin-top:15px; border-top:1px solid #eee; padding-top:15px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div style="background: #f1f5f9; padding: 15px; border-radius: 10px;">
+                        <p style="font-size: 0.7rem; color: var(--muted); font-weight: bold; margin-bottom: 5px;">CANTIDAD DE VENTAS</p>
+                        <h2 id="range-results-count" style="font-family: 'JetBrains Mono';">0</h2>
                     </div>
-                    <div style="background:var(--success-bg); padding:15px; border-radius:10px;">
-                        <p style="font-size:0.7rem; color:var(--success-text);">VALOR TOTAL</p>
-                        <h2 id="range-results-total">$ 0</h2>
+                    <div style="background: var(--success-bg); padding: 15px; border-radius: 10px; border: 1px solid #bbf7d0;">
+                        <p style="font-size: 0.7rem; color: var(--success-text); font-weight: bold; margin-bottom: 5px;">VALOR TOTAL ACUMULADO</p>
+                        <h2 id="range-results-total" style="font-family: 'JetBrains Mono'; color: var(--success-text);">$ 0</h2>
                     </div>
                 </div>
-                <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
-                    <tbody id="table-range-results"></tbody>
-                </table>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <h4 id="range-results-title">Detalle de Ventas</h4>
+                    <div style="display:flex; gap:5px;">
+                        <button onclick="exportExcel()" style="padding:8px 12px; background:#166534; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;">Excel</button>
+                        <button onclick="exportPDF()" style="padding:8px 12px; background:#991b1b; color:white; border:none; border-radius:6px; cursor:pointer; font-size:0.8rem; font-weight:bold;">PDF</button>
+                    </div>
+                </div>
+                <div style="max-height:300px; overflow-y:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+                        <thead style="background:#f1f5f9; position:sticky; top:0;">
+                            <tr><th align="left" style="padding:8px;">Fecha/Hora</th><th>Caja</th><th>Items</th><th align="right">Subtotal</th></tr>
+                        </thead>
+                        <tbody id="table-range-results"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </main>
@@ -321,13 +386,14 @@ let filteredSales = [];
 // --- INICIALIZACIÓN ---
 document.addEventListener('DOMContentLoaded', () => {
     updateSessionUI(); renderProducts(); updateClock();
+	renderBoxHistoryList(); // 👈 AGREGA ESTA LÍNEA AQUÍ
     setInterval(updateClock, 1000); lucide.createIcons();
 });
 
 // --- NAVEGACIÓN ---
 function toggleView(view) {
     const views = ['view-pos', 'view-caja', 'view-global', 'view-rep', 'view-inventario'];
-    const buttons = ['btn-pos', 'btn-caja', 'btn-global', 'btn-rep', 'btn-inventario'];
+    const buttons = ['btn-pos', 'btn-caja',  'btn-rep', 'btn-inventario'];
     
     views.forEach(v => document.getElementById(v).style.display = 'none');
     buttons.forEach(b => document.getElementById(b).classList.remove('active'));
@@ -342,8 +408,11 @@ function toggleView(view) {
 
     document.getElementById('btn-' + view).classList.add('active');
     
-    if(view === 'inventario') renderInventory();
-    if(['caja','global','rep'].includes(view)) renderReports();
+    if(view === 'inventario') renderInventory();	
+    if(['caja','global','rep'].includes(view)) {
+        renderReports();
+        renderBoxHistoryList(); // 👈 AGREGA ESTA LÍNEA AQUÍ
+    }
     lucide.createIcons();
 }
 
@@ -352,25 +421,28 @@ function updateSessionUI() {
     const btn = document.getElementById('btn-cash-action');
     const status = document.getElementById('session-status-text');
     const idTxt = document.getElementById('session-id-text');
+    const clockTxt = document.getElementById('session-clock-text');
     if(currentSession) {
         btn.innerText = "Cerrar Caja"; btn.style.background = "var(--danger)";
         status.innerText = "🟢 ABIERTA"; status.style.color = "#4ade80";
         idTxt.innerText = "ID: " + currentSession.id;
+        clockTxt.innerText = "Desde: " + currentSession.startTime;
     } else {
         btn.innerText = "Abrir Caja"; btn.style.background = "#10b981";
         status.innerText = "🔴 CERRADA"; status.style.color = "#f87171";
-        idTxt.innerText = "ID: ---";
+        idTxt.innerText = "ID: ---"; clockTxt.innerText = "--:--";
     }
 }
 
 function handleCashManagement() {
     if(!currentSession) document.getElementById('modal-cash-open').style.display='flex';
-    else if(confirm("¿Cerrar caja actual?")) { currentSession = null; localStorage.removeItem('pos_session'); updateSessionUI(); }
+    else if(confirm("¿Cerrar caja?")) { currentSession = null; localStorage.removeItem('pos_session'); updateSessionUI(); }
 }
 
 function confirmOpenCash() {
     const amount = parseFloat(document.getElementById('cash-initial-amount').value) || 0;
-    currentSession = { id: "BOX-" + Date.now().toString().slice(-6), base: amount, startTime: new Date().toLocaleTimeString(), date: new Date().toLocaleDateString('es-ES') };
+    const id = "BOX-" + Date.now().toString().slice(-6);
+    currentSession = { id, base: amount, startTime: new Date().toLocaleTimeString([],{hour:'2-digit', minute:'2-digit'}), date: new Date().toLocaleDateString('es-ES') };
     localStorage.setItem('pos_session', JSON.stringify(currentSession));
     updateSessionUI(); document.getElementById('modal-cash-open').style.display='none';
 }
@@ -499,6 +571,10 @@ function processFinalSale() {
     cart = []; renderCart(); renderProducts(); closeCheckout(); alert("Venta Exitosa");
 }
 
+
+
+
+
 // --- MÓDULO INVENTARIO ---
 function renderInventory() {
     const tbody = document.getElementById('table-inventory-body');
@@ -551,18 +627,97 @@ function renderReports() {
     document.getElementById('rep-total-today').innerText = `$ ${sumH.toLocaleString()}`;
 }
 
+function renderBoxHistoryList() {
+    const sel = document.getElementById('select-box-history');
+    const ids = [...new Set(sales.map(s => s.boxId))].reverse();
+    sel.innerHTML = '<option value="">Seleccione caja...</option>';
+    ids.forEach(id => { sel.innerHTML += `<option value="${id}">${id} - (${sales.find(s=>s.boxId===id).date})</option>`; });
+}
+function renderBoxHistoryList() {
+    const sel = document.getElementById('select-box-history');
+    const selCat = document.getElementById('select-box-category'); // Nueva línea
+    const ids = [...new Set(sales.map(s => s.boxId))].reverse();
+    
+    const options = '<option value="">Seleccione caja...</option>' + 
+                    ids.map(id => `<option value="${id}">${id} - (${sales.find(s=>s.boxId===id).date})</option>`).join('');
+    
+    sel.innerHTML = options;
+    selCat.innerHTML = options; // Nueva línea
+}
+
+function loadBoxFromHistory() {
+    const id = document.getElementById('select-box-history').value;
+    const container = document.getElementById('history-box-detail');
+    if(!id) return;
+    const boxS = sales.filter(s => s.boxId === id); const sum = boxS.reduce((a,b)=>a+b.total,0);
+    container.style.display='block';
+    container.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><strong>ID: ${id}</strong><div style="display:flex; gap:5px;"><button class="btn-export-mini" style="background:#166534;" onclick="exportSingleBoxExcel('${id}')">Excel</button><button class="btn-export-mini" style="background:#991b1b;" onclick="exportSingleBoxPDF('${id}')">PDF</button></div></div><h2 style="color:var(--primary);">$ ${sum.toLocaleString()}</h2><table style="width:100%; font-size:0.8rem;">${boxS.map(s=>`<tr><td>${s.time}</td><td>${s.items}</td><td align="right">$${s.total.toLocaleString()}</td></tr>`).join('')}</table>`;
+}
+// --- MEJORA SOLICITADA: FILTRAR Y SUMAR TOTAL ---
 function filterHistory() {
     const startVal = document.getElementById('rep-date-start').value;
     const endVal = document.getElementById('rep-date-end').value;
     if(!startVal || !endVal) return alert("Seleccione fechas");
+    
     const start = new Date(startVal + 'T00:00:00').getTime();
     const end = new Date(endVal + 'T23:59:59').getTime();
+    
     filteredSales = sales.filter(s => s.timestamp >= start && s.timestamp <= end);
+    
+    const ui = document.getElementById('range-results-ui');
     const tbody = document.getElementById('table-range-results');
-    document.getElementById('range-results-ui').style.display = 'block';
-    document.getElementById('range-results-count').innerText = filteredSales.length;
-    document.getElementById('range-results-total').innerText = `$ ${filteredSales.reduce((a,b)=>a+b.total,0).toLocaleString()}`;
-    tbody.innerHTML = filteredSales.map(s => `<tr><td style="padding:8px;">${s.date} ${s.time}</td><td>${s.items}</td><td align="right"><strong>$${s.total.toLocaleString()}</strong></td></tr>`).join('');
+    
+    if(filteredSales.length > 0) {
+        ui.style.display = 'block';
+        
+        // CALCULO DE MEJORA: Suma de todos los subtotales del rango
+        const totalDinero = filteredSales.reduce((acc, s) => acc + s.total, 0);
+        
+        document.getElementById('range-results-count').innerText = filteredSales.length;
+        document.getElementById('range-results-total').innerText = `$ ${totalDinero.toLocaleString()}`;
+        
+        tbody.innerHTML = filteredSales.map(s => `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px;">${s.date}<br><small>${s.time}</small></td>
+                <td><small>${s.boxId}</small></td>
+                <td>${s.items}</td>
+                <td align="right"><strong>$${s.total.toLocaleString()}</strong></td>
+            </tr>
+        `).join('');
+    } else {
+        ui.style.display = 'none';
+        alert("No se encontraron registros en este rango.");
+    }
+}
+
+function exportExcel() {
+    const data = filteredSales.length ? filteredSales : sales;
+    const ws = XLSX.utils.json_to_sheet(data.map(s=>({"Fecha":s.date, "Caja":s.boxId, "Items":s.items, "Total":s.total})));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ventas");
+    XLSX.writeFile(wb, "Reporte_General.xlsx");
+}
+
+function exportPDF() {
+    const data = filteredSales.length ? filteredSales : sales;
+    const { jsPDF } = window.jspdf; const doc = new jsPDF();
+    doc.text("Reporte SistePOS", 14, 15);
+    doc.autoTable({ head:[['Fecha','Caja','Total']], body: data.map(s=>[s.date, s.boxId, '$'+s.total.toLocaleString()]) });
+    doc.save("Reporte_General.pdf");
+}
+
+function exportSingleBoxExcel(boxId) {
+    const bSales = sales.filter(s => s.boxId === boxId);
+    const ws = XLSX.utils.json_to_sheet(bSales.map(s=>({"Hora":s.time, "Items":s.items, "Subtotal":s.total})));
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Cierre");
+    XLSX.writeFile(wb, `Cierre_${boxId}.xlsx`);
+}
+
+function exportSingleBoxPDF(boxId) {
+    const bSales = sales.filter(s => s.boxId === boxId);
+    const { jsPDF } = window.jspdf; const doc = new jsPDF();
+    doc.text(`Cierre de Caja: ${boxId}`, 14, 15);
+    doc.autoTable({ head:[['Hora','Productos','Total']], body: bSales.map(s=>[s.time, s.items, '$'+s.total.toLocaleString()]) });
+    doc.save(`Cierre_${boxId}.pdf`);
 }
 
 // --- UTILIDADES ---
@@ -605,6 +760,70 @@ function editProduct(id) {
 function closeModal() { document.getElementById('modal-product').style.display = 'none'; }
 function closeCheckout() { document.getElementById('modal-checkout').style.display = 'none'; }
 function toggleMobileCart() { document.getElementById('cart-aside').classList.toggle('active-mobile'); }
+
+function renderCategoryReport() {
+    const boxId = document.getElementById('select-box-category').value;
+    const container = document.getElementById('category-report-results');
+    const tbody = document.getElementById('table-category-body');
+    
+    if(!boxId) return alert("Seleccione una caja");
+
+    const boxSales = sales.filter(s => s.boxId === boxId);
+    let categoryMap = {};
+
+    boxSales.forEach(sale => {
+        // Usamos detailedItems si existe (ventas nuevas) o intentamos procesar el string (ventas viejas)
+        if (sale.detailedItems) {
+            sale.detailedItems.forEach(item => {
+                if (!categoryMap[item.category]) {
+                    categoryMap[item.category] = { qty: 0, total: 0 };
+                }
+                categoryMap[item.category].qty += item.qty;
+                categoryMap[item.category].total += (item.priceAtSale * item.qty);
+            });
+        } else {
+            // Lógica de respaldo para ventas realizadas antes de este cambio
+            const itemParts = sale.items.split(', ');
+            itemParts.forEach(part => {
+                const match = part.match(/(\d+)x\s+(.+)/);
+                if(match) {
+                    const qty = parseInt(match[1]);
+                    const productName = match[2].trim();
+                    const productData = products.find(p => p.name === productName);
+                    const category = productData ? productData.category : "Sin Categoría";
+                    const price = productData ? productData.variants[0].price : 0;
+                    
+                    if(!categoryMap[category]) categoryMap[category] = { qty: 0, total: 0 };
+                    categoryMap[category].qty += qty;
+                    categoryMap[category].total += (price * qty);
+                }
+            });
+        }
+    });
+
+    // Renderizar
+    tbody.innerHTML = '';
+    let grandQty = 0;
+    let grandMoney = 0;
+
+    Object.keys(categoryMap).forEach(cat => {
+        const data = categoryMap[cat];
+        grandQty += data.qty;
+        grandMoney += data.total;
+        
+        tbody.innerHTML += `
+            <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:10px;">${cat}</td>
+                <td align="right">${data.qty}</td>
+                <td align="right">$ ${data.total.toLocaleString()}</td>
+            </tr>`;
+    });
+
+    document.getElementById('cat-total-qty').innerText = grandQty;
+    document.getElementById('cat-total-money').innerText = `$ ${grandMoney.toLocaleString()}`;
+    container.style.display = 'block';
+}
+
 </script>
 
 </body>
